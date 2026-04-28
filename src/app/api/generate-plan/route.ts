@@ -31,8 +31,12 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(plan)
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error al generar el plan'
     console.error('generate-plan error:', err)
-    return NextResponse.json({ error: message }, { status: 500 })
+    const raw = err instanceof Error ? err.message : ''
+    const isRateLimit = raw === 'RATE_LIMIT' || raw.includes('429') || raw.includes('rate_limit')
+    const message = isRateLimit
+      ? 'La app está generando muchos planes en este momento. Intenta de nuevo en unos minutos. 🙏'
+      : 'Error al generar el plan. Intenta de nuevo.'
+    return NextResponse.json({ error: message }, { status: isRateLimit ? 429 : 500 })
   }
 }

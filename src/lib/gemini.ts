@@ -10,7 +10,9 @@ export async function generateMealPlan(profile: UserProfile): Promise<MealPlan> 
 
   const groq = new Groq({ apiKey })
 
-  const completion = await groq.chat.completions.create({
+  let completion
+  try {
+    completion = await groq.chat.completions.create({
     model: 'llama-3.3-70b-versatile',
     messages: [
       { role: 'system', content: buildSystemPrompt() },
@@ -20,6 +22,13 @@ export async function generateMealPlan(profile: UserProfile): Promise<MealPlan> 
     max_tokens: 7500,
     response_format: { type: 'json_object' },
   })
+  } catch (err: unknown) {
+    const status = (err as { status?: number })?.status
+    if (status === 429) {
+      throw new Error('RATE_LIMIT')
+    }
+    throw err
+  }
 
   const responseText = completion.choices[0]?.message?.content ?? ''
 
