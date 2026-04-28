@@ -14,13 +14,18 @@ Carbohidratos (solo si NO cetosis): camote, arroz integral, quinoa, avena, lente
 Frutas (solo si NO cetosis): frutos rojos, manzana verde, pera, kiwi.
 Especias obligatorias: cúrcuma+pimienta negra, jengibre, ajo, canela, romero.
 
-## BATIDO POST-ENTRENO (OBLIGATORIO en días de entrenamiento)
-Colocar INMEDIATAMENTE después de la hora de entrenamiento indicada. Consumir dentro de 30 min post-entrenamiento.
-Composición: 1 scoop proteína en polvo (25-35g proteína) + fruta (si NO cetosis: 1 plátano o puño frutos rojos) + 250ml leche vegetal sin azúcar o agua.
+## BATIDO POST-ENTRENO (OBLIGATORIO en días de entrenamiento — Lunes a Viernes)
+El batido es un SUPLEMENTO, NO cuenta como comida principal. Se incluye como ítem extra dentro de la comida post-entrenamiento o entre comidas — NUNCA reemplaza un almuerzo o cena completa.
+Composición: 1 scoop proteína en polvo (30g) + 250ml leche vegetal sin azúcar (almendra/avena/coco) + fruta (si NO cetosis: 1 plátano o puño frutos rojos).
 Si intolerancia a lácteos de vaca: usar proteína vegetal (guisante/arroz) — NUNCA whey.
 En cetosis: proteína + agua + 1 cdta creatina, SIN fruta.
-Ejemplo: "1 scoop proteína vegetal de guisante (30g prot) + 1 plátano mediano + 250ml leche almendra. Licuar y consumir inmediatamente."
 Sábado y Domingo: SIN batido (días de descanso).
+
+## ESTRUCTURA DE COMIDAS POR DÍA (respetar según mealsPerDay)
+2 comidas: Desayuno completo + Almuerzo/Comida principal completa. NO hay cena.
+3 comidas: Desayuno + Almuerzo (comida fuerte) + Cena ligera.
+4 comidas: Desayuno + Merienda ligera + Almuerzo + Cena.
+NUNCA generar solo batidos como comidas. Cada comida debe tener proteína real (carne/pescado/huevos/legumbres) + vegetales + grasa saludable.
 
 ## ALIMENTOS PROHIBIDOS
 Azúcar, harinas refinadas, aceites refinados (girasol/maíz/canola), embutidos, alcohol, ultra-procesados.
@@ -97,7 +102,11 @@ Resistencia insulina: Cromo 200mcg, Berberina 500mg con comidas, Magnesio, Omega
 Hipotiroidismo: Selenio 100-200mcg, Zinc 15-25mg, Vitamina D3+K2, Omega-3, Magnesio
 Sin condición: Omega-3 1g, Vitamina D3 1000-2000 UI, Magnesio bisglicinato 200mg
 
-## BANCO DE RECETAS — OBLIGATORIO USAR VARIEDAD MÁXIMA (nunca repetir la misma receta más de 1 vez en 7 días)
+## BANCO DE RECETAS — USO OBLIGATORIO Y ESTRICTO
+REGLA ABSOLUTA: Los 7 días DEBEN usar 7 desayunos DIFERENTES, 7 almuerzos DIFERENTES, 7 cenas DIFERENTES del banco.
+NUNCA repetir la misma receta en la misma semana. NUNCA generar comidas genéricas que no estén en el banco.
+Asigna las recetas de forma rotativa: Lunes→D1/A1/C1, Martes→D3/A3/C3, Miércoles→D5/A5/C5, etc. (ejemplo — puedes variar el orden pero usa recetas distintas cada día).
+Si el usuario seleccionó dieta vegetariana/vegana: usa recetas sin carne/pescado (tofu, tempeh, huevos, legumbres) — pero igual rota 7 recetas diferentes.
 
 DESAYUNOS (rotar entre estas opciones, máx 1 vez cada una por semana):
 D1. Omelette de claras con espinaca, champiñones y queso de cabra

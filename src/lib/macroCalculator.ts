@@ -1,4 +1,4 @@
-import { MealPlan, FoodItem, Meal, AlternativeMeal } from '@/types'
+﻿import { MealPlan, FoodItem, Meal, AlternativeMeal } from '@/types'
 
 // Per 100g values — sourced from official nutrition table
 const FOOD_DB: Record<string, { cal: number; p: number; c: number; f: number }> = {
@@ -44,7 +44,10 @@ const FOOD_DB: Record<string, { cal: number; p: number; c: number; f: number }> 
   aceite_oliva:   { cal: 884, p: 0.0,  c: 0.0,  f: 100.0 },
   platano:        { cal: 89,  p: 1.1,  c: 22.8, f: 0.3  },
   arandano:       { cal: 57,  p: 0.7,  c: 14.5, f: 0.3  },
-  proteina_polvo: { cal: 120, p: 25.0, c: 3.0,  f: 1.5  },
+  proteina_polvo: { cal: 380, p: 78.0, c: 6.0,  f: 5.0  },
+  leche_almendra: { cal: 13,  p: 0.4,  c: 0.4,  f: 1.1  },
+  leche_avena:    { cal: 45,  p: 0.8,  c: 7.5,  f: 1.0  },
+  leche_coco_beb: { cal: 17,  p: 0.2,  c: 0.8,  f: 1.3  },
 }
 
 function norm(s: string): string {
@@ -91,6 +94,10 @@ function matchFood(foodName: string): string | null {
   if (n.includes('avena') || n.includes('oat')) return 'avena'
   if (n.includes('lenteja')) return 'lenteja'
   if (n.includes('garbanzo') || n.includes('chickpea')) return 'garbanzo'
+  if (n.includes('leche') && n.includes('almendra')) return 'leche_almendra'
+  if (n.includes('leche') && n.includes('avena')) return 'leche_avena'
+  if (n.includes('leche') && (n.includes('coco') || n.includes('coconut'))) return 'leche_coco_beb'
+  if (n.includes('leche') && (n.includes('vegetal') || n.includes('arroz') || n.includes('soja') || n.includes('plant'))) return 'leche_almendra'
   if (n.includes('almendra')) return 'almendra'
   if (n.includes('nuez') || n.includes('nueces') || n.includes('walnut')) return 'nuez'
   if (n.includes('chia')) return 'chia'
