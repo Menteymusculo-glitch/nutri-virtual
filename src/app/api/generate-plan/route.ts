@@ -15,15 +15,32 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Check if this person already generated a plan in the last 7 days
+    const supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_KEY!
+    )
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+    const { data: recent } = await supabase
+      .from('clients')
+      .select('created_at')
+      .ilike('name', profile.name.trim())
+      .gte('created_at', sevenDaysAgo)
+      .limit(1)
+
+    if (recent && recent.length > 0) {
+      const planDate = new Date(recent[0].created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })
+      return NextResponse.json(
+        { error: `Ya generaste un plan el ${planDate}. Tu próximo plan estará disponible 7 días después. Si necesitas cambios, contacta a tu coach. 💪` },
+        { status: 429 }
+      )
+    }
+
     const plan = await generateMealPlan(profile)
     plan.shoppingList = calculateShoppingList(plan)
 
     // Auto-save to Supabase (non-blocking — don't fail if DB is unavailable)
     try {
-      const supabase = createClient(
-        process.env.SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_KEY!
-      )
       await supabase.from('clients').insert([{ name: profile.name, profile, plan }])
     } catch (dbErr) {
       console.warn('Supabase save skipped:', dbErr)
