@@ -1,6 +1,7 @@
 import Groq from 'groq-sdk'
 import { UserProfile, MealPlan } from '@/types'
 import { buildSystemPrompt, buildUserPrompt } from './systemPrompt'
+import { recalculateMacros } from './macroCalculator'
 
 export async function generateMealPlan(profile: UserProfile): Promise<MealPlan> {
   const apiKey = process.env.GROQ_API_KEY
@@ -46,6 +47,9 @@ export async function generateMealPlan(profile: UserProfile): Promise<MealPlan> 
   parsed.generatedAt = new Date().toISOString()
   parsed.weekNumber = 1
   parsed.userName = profile.name
+
+  // Recalculate macros in code — LLM values are unreliable
+  recalculateMacros(parsed)
 
   return parsed
 }
