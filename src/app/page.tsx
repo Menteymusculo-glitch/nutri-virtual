@@ -552,6 +552,7 @@ function Step5({
     { value: 'none', emoji: '✅', label: 'Sin condición específica' },
     { value: 'obesity', emoji: '⚖️', label: 'Obesidad' },
     { value: 'perimenopause', emoji: '🌸', label: 'Perimenopausia' },
+    { value: 'menopause', emoji: '🔥', label: 'Menopausia' },
     { value: 'pcos', emoji: '🔄', label: 'SOP (Ovario Poliquístico)' },
     { value: 'insulin_resistance', emoji: '🍭', label: 'Resistencia a la Insulina' },
     { value: 'hypothyroidism', emoji: '🦋', label: 'Hipotiroidismo' },

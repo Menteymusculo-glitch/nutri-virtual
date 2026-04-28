@@ -12,7 +12,7 @@ export interface UserProfile {
   trainingType: 'strength' | 'cardio' | 'mixed' | 'yoga_pilates' | 'rays_program' | 'none'
   trainingDays: number
   trainingTime: 'morning' | 'afternoon' | 'evening' | 'none'
-  hormonal: 'none' | 'obesity' | 'perimenopause' | 'pcos' | 'insulin_resistance' | 'hypothyroidism'
+  hormonal: 'none' | 'obesity' | 'perimenopause' | 'menopause' | 'pcos' | 'insulin_resistance' | 'hypothyroidism'
   allergies: string[]
   intolerances: string[]
   mealsPerDay: number

@@ -71,9 +71,31 @@ Verificar que la SUMA de proteína de todas las comidas alcance el objetivo diar
 
 ## ADAPTACIONES HORMONALES
 Obesidad/Perimenopausia: cetosis estricta + cúrcuma/jengibre diario + linaza molida 2 cdas + SIN cafeína.
+Menopausia: cetosis estricta + cúrcuma/jengibre diario + linaza molida 2 cdas + SIN cafeína + priorizar calcio (brócoli, almendras, sardinas con espina) + incluir soja/edamame (fitoestrógenos) si no hay SOP.
 SOP: bajo IG estricto + semillas de calabaza (zinc) + omega-3 diario.
 Resistencia insulina: vinagre manzana 1 cda antes comidas principales + canela en desayuno.
 Hipotiroidismo: brócoli/coliflor/kale SOLO cocidos + 2-3 nueces de Brasil/día.
+
+## PROTOCOLO DE SUPLEMENTACIÓN (incluir siempre en el campo "supplementation")
+PERIMENOPAUSIA y MENOPAUSIA — Los 5 pilares obligatorios:
+1. Creatina monohidrato 3-5g/día todos los días (entrene o no) — contrarrestar pérdida muscular por caída de estrógenos, energía, claridad mental
+2. Magnesio bisglicinato 300-400mg antes de dormir — relajación muscular, sueño profundo, reduce ansiedad
+3. Vitamina D3 2000-5000 UI + K2 100mcg con almuerzo — densidad ósea (calcio a huesos, no arterias), sistema inmune
+4. Omega-3 EPA+DHA 2g con almuerzo (pureza garantizada, libre de metales pesados) — antiinflamatorio, cardiovascular, articulaciones, estado de ánimo
+5. Proteína vegetal en polvo post-entreno — resistencia anabólica: necesita mayor dosis proteica por comida para síntesis muscular
+
+Optimizadores adicionales (según síntomas — mencionar en hormonalNotes):
+- Ashwagandha KSM-66 300-600mg con cena: si hay estrés elevado, ansiedad o mal sueño. Ciclos 2 meses on / 1 mes off.
+- CoQ10 Ubiquinol 100-200mg con almuerzo: si hay fatiga profunda que no cede con descanso, o para rendimiento en entrenamiento intenso
+- Vitamina C 500-1000mg con almuerzo: producción de colágeno, protección articular y ligamentos (clave si entrena 4-5 días/semana)
+- Resveratrol 150-500mg: antioxidante longevidad, protección cardiovascular (efecto a largo plazo)
+- B12: solo necesaria si dieta vegana o déficit analítico confirmado
+
+RESTO DE CONDICIONES:
+SOP: Omega-3 2g, Inositol, Vitamina D3+K2, Magnesio bisglicinato, semillas de calabaza (zinc)
+Resistencia insulina: Cromo 200mcg, Berberina 500mg con comidas, Magnesio, Omega-3, Canela en polvo
+Hipotiroidismo: Selenio 100-200mcg, Zinc 15-25mg, Vitamina D3+K2, Omega-3, Magnesio
+Sin condición: Omega-3 1g, Vitamina D3 1000-2000 UI, Magnesio bisglicinato 200mg
 
 ## BANCO DE RECETAS — OBLIGATORIO USAR VARIEDAD MÁXIMA (nunca repetir la misma receta más de 1 vez en 7 días)
 
@@ -225,8 +247,8 @@ NOCHE — OBLIGATORIA, 30-60 min antes de dormir (elegir una diferente cada día
   "shoppingList": [{"category": "Proteínas", "items": ["500g pechuga de pollo"]}],
   "tips": ["tip 1", "tip 2", "tip 3"],
   "hydration": "Protocolo: infusión matutina en ayunas + infusión mediodía + infusión nocturna. Especifica cuáles y cuándo.",
-  "supplementation": ["Magnesio 400mg antes de dormir", "Omega-3 con almuerzo"],
-  "hormonalNotes": "Notas específicas hormonales",
+  "supplementation": ["Creatina monohidrato 3-5g al día (entrenes o no)", "Magnesio bisglicinato 300-400mg antes de dormir", "Vitamina D3 2000-5000 UI + K2 100mcg con almuerzo", "Omega-3 EPA+DHA 2g con almuerzo", "Proteína vegetal en polvo post-entreno"],
+  "hormonalNotes": "Notas específicas hormonales y de suplementación",
   "notes": "Mensaje motivacional de Master Ray Viloria"
 }`
 }
@@ -273,6 +295,7 @@ const hormonalLabels: Record<string, string> = {
   none: 'Sin condición específica',
   obesity: 'Obesidad',
   perimenopause: 'Perimenopausia',
+  menopause: 'Menopausia',
   pcos: 'SOP (Síndrome de Ovario Poliquístico)',
   insulin_resistance: 'Resistencia a la Insulina',
   hypothyroidism: 'Hipotiroidismo',
