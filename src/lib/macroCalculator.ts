@@ -44,7 +44,7 @@ const FOOD_DB: Record<string, { cal: number; p: number; c: number; f: number }> 
   aceite_oliva:   { cal: 884, p: 0.0,  c: 0.0,  f: 100.0 },
   platano:        { cal: 89,  p: 1.1,  c: 22.8, f: 0.3  },
   arandano:       { cal: 57,  p: 0.7,  c: 14.5, f: 0.3  },
-  proteina_polvo: { cal: 120, p: 25.0, c: 3.0,  f: 1.5  }, // per 30g scoop
+  proteina_polvo: { cal: 120, p: 25.0, c: 3.0,  f: 1.5  },
 }
 
 function norm(s: string): string {
@@ -73,7 +73,7 @@ function matchFood(foodName: string): string | null {
   if (n.includes('queso') && (n.includes('cabra') || n.includes('feta') || n.includes('cottage'))) return 'queso_cabra'
   if (n.includes('yogur') && n.includes('griego')) return 'yogur_griego'
   if (n.includes('aguacate') || n.includes('palta')) return 'aguacate'
-  if (n.includes('brocoli') || n.includes('brocoli')) return 'brocoli'
+  if (n.includes('brocoli')) return 'brocoli'
   if (n.includes('espinaca')) return 'espinaca'
   if (n.includes('champinon') || n.includes('hongo') || n.includes('portobello')) return 'champinon'
   if (n.includes('esparrag')) return 'esparragos'
@@ -93,7 +93,7 @@ function matchFood(foodName: string): string | null {
   if (n.includes('garbanzo') || n.includes('chickpea')) return 'garbanzo'
   if (n.includes('almendra')) return 'almendra'
   if (n.includes('nuez') || n.includes('nueces') || n.includes('walnut')) return 'nuez'
-  if (n.includes('chia') || n.includes('chía')) return 'chia'
+  if (n.includes('chia')) return 'chia'
   if (n.includes('linaza') || n.includes('lino')) return 'linaza'
   if (n.includes('aceite') && n.includes('oliva')) return 'aceite_oliva'
   if (n.includes('platano') || n.includes('banana') || n.includes('guineo')) return 'platano'
@@ -105,44 +105,35 @@ function matchFood(foodName: string): string | null {
 function parseGrams(amount: string, foodName: string): number | null {
   const n = norm(amount)
 
-  // Explicit grams: "150g", "150 gr"
   const grMatch = amount.match(/(\d+(?:[.,]\d+)?)\s*(?:g|gr|grs|gramos)(?!\w)/i)
   if (grMatch) return parseFloat(grMatch[1].replace(',', '.'))
 
-  // Milliliters: "250ml"
   const mlMatch = amount.match(/(\d+(?:[.,]\d+)?)\s*ml/i)
   if (mlMatch) return parseFloat(mlMatch[1])
 
-  // "2 huevos" → 2 × 55g
   const huevoMatch = amount.match(/(\d+)\s*huevo/i)
   if (huevoMatch) return parseInt(huevoMatch[1]) * 55
 
-  // "1/2 aguacate" → 75g, "1 aguacate" → 150g
   if (norm(foodName).includes('aguacate') || n.includes('aguacate')) {
     if (amount.includes('1/2') || amount.includes('½')) return 75
     if (/^1\s/.test(amount.trim())) return 150
   }
 
-  // "X scoop" → X × 30g
   const scoopMatch = amount.match(/(\d*)\s*scoop/i)
   if (scoopMatch) return (parseInt(scoopMatch[1]) || 1) * 30
 
-  // Teaspoon: "1 cdta" → 5g
   const cdtaMatch = amount.match(/(\d+(?:[.,]\d+)?)\s*cdta/i)
   if (cdtaMatch) return parseFloat(cdtaMatch[1]) * 5
 
-  // Tablespoon: "2 cdas" → 30g
   const cdasMatch = amount.match(/(\d+(?:[.,]\d+)?)\s*cdas?/i)
   if (cdasMatch) return parseFloat(cdasMatch[1]) * 15
 
-  // Cups: "1 taza" → 240g, "1/2 taza" → 120g
   if (n.includes('taza')) {
     if (amount.includes('1/2') || amount.includes('½')) return 120
     const tazaMatch = amount.match(/(\d+)\s*taza/i)
     return tazaMatch ? parseInt(tazaMatch[1]) * 240 : 240
   }
 
-  // Handful: "1 puño" → 30g
   if (n.includes('puno') || n.includes('punado')) return 30
 
   return null
