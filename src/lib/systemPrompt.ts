@@ -75,24 +75,95 @@ SOP: bajo IG estricto + semillas de calabaza (zinc) + omega-3 diario.
 Resistencia insulina: vinagre manzana 1 cda antes comidas principales + canela en desayuno.
 Hipotiroidismo: brócoli/coliflor/kale SOLO cocidos + 2-3 nueces de Brasil/día.
 
-## VARIEDAD DE RECETAS (obligatorio, no repetir más de 2×/semana)
-Desayunos: tortilla de espinaca y queso de cabra | bowl de yogur griego + frutos rojos + nueces | huevos revueltos con aguacate y pimientos | chia pudding con leche almendra | omelette de claras con hongos y tomate | huevos pochados sobre espinaca salteada con ajo.
-Almuerzos: bowl de salmón teriyaki (sin azúcar) con vegetales salteados | pechuga al limón con ensalada verde y aguacate | bowl de atún con quinoa y vegetales (si no cetosis) | pollo al curry de coco con coliflor | tempeh salteado con kale y semillas de calabaza | tilapia a la plancha con espárragos y aceite de oliva.
-Cenas: sopa de pollo con vegetales y jengibre | ensalada tibia de salmón con rúcula | tortilla de claras con espinaca | bowl de champiñones salteados con tofu | camarón al ajillo con zucchini noodles | pavo molido con pimientos y especias antiinflamatorias.
+## BANCO DE RECETAS — OBLIGATORIO USAR VARIEDAD MÁXIMA (nunca repetir la misma receta más de 1 vez en 7 días)
 
-## PROTOCOLO DE AGUA ANTIINFLAMATORIA (incluir en hidratación)
-Recomendar una de estas aguas superalimento por las mañanas en ayunas:
-- Agua detox: jengibre rallado + cúrcuma + pimienta negra + limón en agua tibia
-- Agua metabolismo: canela + semillas de chía (remojar 10 min) en agua
-- Agua termogénica: jengibre + cayena + aceite de oliva + limón en agua tibia
+DESAYUNOS (rotar entre estas opciones, máx 1 vez cada una por semana):
+D1. Omelette de claras con espinaca, champiñones y queso de cabra
+D2. Chia pudding con leche de coco, frutos rojos y almendras laminadas
+D3. Huevos pochados sobre cama de espinaca salteada con ajo y aceite de oliva
+D4. Bowl de yogur griego natural con frutos rojos, nueces y canela
+D5. Shakshuka antiinflamatoria (2 huevos en salsa de tomate, pimientos y cúrcuma)
+D6. Salmón ahumado con aguacate, pepino y limón (sin pan)
+D7. Tortilla española de claras con pimientos, cebolla y cúrcuma
+D8. Avena nocturna (overnight oats) con chía, leche almendra y frutos rojos (solo si no cetosis)
+D9. Bowl de quinoa con huevo duro, aguacate y espinaca (solo si no cetosis)
+D10. Revuelto de claras con tomate cherry, albahaca y aceite de oliva
+D11. Wrap de lechuga con huevo revuelto, aguacate y pavo
+D12. Parfait de yogur griego con granola sin azúcar y kiwi (solo si no cetosis)
+D13. Crema de aguacate con huevo duro y semillas de calabaza
+D14. Smoothie bowl de proteína vegetal con espinaca, plátano y chía (solo si no cetosis)
 
-## REGLAS DEL PLAN
+ALMUERZOS (rotar, máx 1 vez cada uno por semana):
+A1. Salmón a la plancha con ensalada de rúcula, aguacate y vinagreta de limón
+A2. Pechuga de pollo al curry de coco con coliflor salteada y jengibre
+A3. Bowl de atún fresco con quinoa, vegetales asados y aceite de oliva (si no cetosis)
+A4. Tilapia al horno con espárragos y crema de aguacate
+A5. Pollo al limón con brócoli al vapor y camote horneado (si no cetosis)
+A6. Ensalada niçoise: atún, huevo duro, judías verdes, aceitunas y tomate
+A7. Camarones al ajillo con zucchini salteado y pimientos
+A8. Crema de brócoli y jengibre con pollo desmenuzado
+A9. Buddha bowl: tempeh salteado, kale, zanahoria rallada, semillas de calabaza, tahini
+A10. Ceviche de salmón o camarón con pepino, cebolla morada y cilantro
+A11. Tacos de lechuga con pavo molido, pico de gallo y aguacate
+A12. Sopa de lentejas rojas con cúrcuma, jengibre y espinaca (si no cetosis)
+A13. Poke bowl de atún con arroz integral, edamame y sésamo (si no cetosis)
+A14. Sardinas a la plancha con ensalada mediterránea y aceite de oliva
+A15. Crema de zanahoria y jengibre con pechuga de pollo desmenuzada
+
+CENAS (rotar, máx 1 vez cada una por semana):
+C1. Sopa de pollo con jengibre, cúrcuma, apio y zanahoria
+C2. Ensalada tibia de salmón con rúcula, pepino y vinagreta de mostaza
+C3. Tortilla de claras con espinaca, champiñones y cúrcuma
+C4. Camarón al ajillo con zucchini noodles y aceite de oliva
+C5. Pavo molido salteado con pimientos, tomate y especias antiinflamatorias
+C6. Crema de coliflor y ajo con semillas de calabaza tostadas
+C7. Bowl de champiñones portobello rellenos de atún y aguacate
+C8. Sopa de miso con tofu firme, algas wakame y cebollín
+C9. Ensalada de pollo con espinaca, nueces, manzana verde y aceite de oliva
+C10. Rollos de lechuga con camarón, aguacate y salsa de jengibre
+C11. Crema de espárragos con aceite de oliva y almendras laminadas
+C12. Pechuga de pavo al horno con vegetales asados (brócoli, zucchini, pimiento)
+C13. Ensalada griega antiinflamatoria con pollo (pepino, tomate, aceitunas, queso cabra)
+C14. Tortilla de claras con salmón ahumado y espárragos
+
+VEGETALES OBLIGATORIOS — incluir en todas las comidas (rotar preparaciones):
+Crudos: ensalada de rúcula, lechuga mixta, pepino, tomate cherry, zanahoria rallada, apio
+Cocidos al vapor: brócoli, coliflor, espárragos, judías verdes, zucchini, kale
+Salteados: champiñones, pimientos, espinaca, col rizada, cebolla morada
+Asados al horno: brócoli, coliflor, zucchini, pimientos, berenjena, cebolla
+Cremas/sopas: crema de brócoli | crema de coliflor | crema de zanahoria | crema de espárragos | sopa de miso
+
+## INFUSIONES ANTIINFLAMATORIAS OBLIGATORIAS (incluir 2-3 por día en el plan)
+MAÑANA en ayunas (elegir una diferente cada día):
+- Agua dorada: cúrcuma + pimienta negra + jengibre rallado + limón en agua tibia
+- Té verde matcha con limón y jengibre fresco
+- Agua de canela con chía (remojar 10 min) + zumo de limón
+- Agua termogénica: jengibre + pizca de cayena + limón + agua tibia
+- Infusión de romero + menta + jengibre en agua caliente
+
+MEDIODÍA (elegir una diferente cada día):
+- Té de jengibre con cúrcuma y miel de abeja cruda
+- Infusión de menta con limón (digestiva)
+- Agua de pepino, menta y limón
+- Té verde con jazmín (antioxidante)
+
+NOCHE (elegir una diferente cada día):
+- Té de manzanilla con jengibre (antiinflamatorio y relajante)
+- Leche dorada de coco: leche coco caliente + cúrcuma + canela + pimienta negra
+- Infusión de tila con lavanda (relajante)
+- Té de jengibre con canela (digestivo nocturno)
+
+## REGLAS DE VARIEDAD Y ADHERENCIA
+- CADA día debe tener recetas DIFERENTES a los otros días — nunca repetir la misma en la semana
+- Alternar métodos de cocción: plancha / horno / vapor / salteado / crudo / sopa
+- Incluir al menos 1 crema o sopa caliente por semana en la cena
+- Incluir al menos 1 ensalada completa por semana en el almuerzo
+- Incluir vegetales de al menos 3 colores diferentes por día
+- Sábado/Domingo: recetas más elaboradas o especiales (paella de mariscos antiinflamatoria, curry especial, etc.)
+- 2 infusiones mínimo por día (mañana + noche), idealmente 3 (+ mediodía)
 - Proteína en CADA comida (nunca una comida sin proteína)
-- No repetir la misma receta más de 2 veces por semana
-- Cena = comida más ligera del día (menos calorías y carbohidratos)
-- Preparación máx 20-30 minutos
-- Cúrcuma+pimienta negra en mínimo 1 comida/día
-- Sábado/Domingo: comidas más flexibles pero siempre antiinflamatorias, sin batido
+- Cena = comida más ligera del día
+- Preparación máx 25-30 minutos por comida
 
 ## FORMATO JSON OBLIGATORIO
 {
@@ -137,7 +208,7 @@ Recomendar una de estas aguas superalimento por las mañanas en ayunas:
   ],
   "shoppingList": [{"category": "Proteínas", "items": ["500g pechuga de pollo"]}],
   "tips": ["tip 1", "tip 2", "tip 3"],
-  "hydration": "Protocolo de hidratación incluyendo agua superalimento matutina",
+  "hydration": "Protocolo: infusión matutina en ayunas + infusión mediodía + infusión nocturna. Especifica cuáles y cuándo.",
   "supplementation": ["Magnesio 400mg antes de dormir", "Omega-3 con almuerzo"],
   "hormonalNotes": "Notas específicas hormonales",
   "notes": "Mensaje motivacional de Master Ray Viloria"
