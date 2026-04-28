@@ -81,50 +81,63 @@ DESAYUNOS (rotar entre estas opciones, máx 1 vez cada una por semana):
 D1. Omelette de claras con espinaca, champiñones y queso de cabra
 D2. Chia pudding con leche de coco, frutos rojos y almendras laminadas
 D3. Huevos pochados sobre cama de espinaca salteada con ajo y aceite de oliva
-D4. Bowl de yogur griego natural con frutos rojos, nueces y canela
-D5. Shakshuka antiinflamatoria (2 huevos en salsa de tomate, pimientos y cúrcuma)
-D6. Salmón ahumado con aguacate, pepino y limón (sin pan)
-D7. Tortilla española de claras con pimientos, cebolla y cúrcuma
-D8. Avena nocturna (overnight oats) con chía, leche almendra y frutos rojos (solo si no cetosis)
+D4. Yogur de cabra o coco con frutos rojos, mix de frutos secos y canela + infusión de jengibre y limón
+D5. Shakshuka antiinflamatoria: 2 huevos en salsa de tomate con pimientos y cúrcuma
+D6. Salmón ahumado con aguacate, pepino y limón
+D7. Tostadas sin gluten (trigo sarraceno o maíz) con aguacate machacado + sardinas en aceite de oliva + cúrcuma latte
+D8. Avena nocturna con chía, leche almendra, frutos rojos y canela (solo si no cetosis)
 D9. Bowl de quinoa con huevo duro, aguacate y espinaca (solo si no cetosis)
 D10. Revuelto de claras con tomate cherry, albahaca y aceite de oliva
-D11. Wrap de lechuga con huevo revuelto, aguacate y pavo
-D12. Parfait de yogur griego con granola sin azúcar y kiwi (solo si no cetosis)
-D13. Crema de aguacate con huevo duro y semillas de calabaza
-D14. Smoothie bowl de proteína vegetal con espinaca, plátano y chía (solo si no cetosis)
+D11. Tortitas proteicas: 1 huevo + 1 plátano machacado + 1 scoop proteína vegetal, vuelta y vuelta en sartén
+D12. Yogur de coco con proteína en polvo mezclada, nueces y arándanos frescos
+D13. Tostadas de pan sin gluten con queso de cabra, tomate natural y orégano
+D14. Huevo revuelto con espinacas y aguacate + fresas frescas + infusión de jengibre con limón
+D15. Pancakes de almendra con manzana asada, frutos secos y canela + cúrcuma latte
+D16. Smoothie bowl de proteína vegetal con espinaca, frutos rojos y semillas de chía (solo si no cetosis)
+D17. Parfait: yogur griego con granola sin azúcar, kiwi y miel de abeja cruda (solo si no cetosis)
+D18. Wrap de lechuga con huevo revuelto, aguacate y pavo en lonchas
 
 ALMUERZOS (rotar, máx 1 vez cada uno por semana):
 A1. Salmón a la plancha con ensalada de rúcula, aguacate y vinagreta de limón
 A2. Pechuga de pollo al curry de coco con coliflor salteada y jengibre
-A3. Bowl de atún fresco con quinoa, vegetales asados y aceite de oliva (si no cetosis)
+A3. Bowl de atún con quinoa, espinacas frescas, tomates cherry y aceite de oliva (si no cetosis)
 A4. Tilapia al horno con espárragos y crema de aguacate
 A5. Pollo al limón con brócoli al vapor y camote horneado (si no cetosis)
-A6. Ensalada niçoise: atún, huevo duro, judías verdes, aceitunas y tomate
+A6. Ensalada niçoise antiinflamatoria: atún, huevo duro, judías verdes, aceitunas y tomate
 A7. Camarones al ajillo con zucchini salteado y pimientos
 A8. Crema de brócoli y jengibre con pollo desmenuzado
-A9. Buddha bowl: tempeh salteado, kale, zanahoria rallada, semillas de calabaza, tahini
+A9. Buddha bowl: tempeh salteado, kale, zanahoria rallada, semillas de calabaza y tahini
 A10. Ceviche de salmón o camarón con pepino, cebolla morada y cilantro
 A11. Tacos de lechuga con pavo molido, pico de gallo y aguacate
 A12. Sopa de lentejas rojas con cúrcuma, jengibre y espinaca (si no cetosis)
-A13. Poke bowl de atún con arroz integral, edamame y sésamo (si no cetosis)
-A14. Sardinas a la plancha con ensalada mediterránea y aceite de oliva
-A15. Crema de zanahoria y jengibre con pechuga de pollo desmenuzada
+A13. Parrillada de espárragos y tomates cherry + caballa o sardinas a la plancha
+A14. Berenjenas rellenas con quinoa, almendras y cebolla al horno (si no cetosis)
+A15. Ensalada completa: pollo asado/sardinas, manzana verde, zanahoria rallada, tomates cherry, aguacate y semillas
+A16. Brócoli con anacardos y aliño de tahín + huevos a la plancha + tomate fresco aliñado
+A17. Pasta de lentejas rojas con pavo picado a la plancha y tomate natural triturado (si no cetosis)
+A18. Bowl de arroz integral con tiras de ternera salteadas y pimientos asados (si no cetosis)
+A19. Ensalada de canónigos con camarones cocidos, pepino en dados y vinagreta suave
+A20. Solomillo de cerdo a la plancha con manzana asada y ensalada verde
 
 CENAS (rotar, máx 1 vez cada una por semana):
 C1. Sopa de pollo con jengibre, cúrcuma, apio y zanahoria
 C2. Ensalada tibia de salmón con rúcula, pepino y vinagreta de mostaza
-C3. Tortilla de claras con espinaca, champiñones y cúrcuma
+C3. Tortilla de puerros y champiñones con aceite de oliva
 C4. Camarón al ajillo con zucchini noodles y aceite de oliva
 C5. Pavo molido salteado con pimientos, tomate y especias antiinflamatorias
-C6. Crema de coliflor y ajo con semillas de calabaza tostadas
-C7. Bowl de champiñones portobello rellenos de atún y aguacate
+C6. Crema de judías verdes y espinacas con cúrcuma y jengibre
+C7. Muslo de pollo al horno con coles de Bruselas y romero
 C8. Sopa de miso con tofu firme, algas wakame y cebollín
 C9. Ensalada de pollo con espinaca, nueces, manzana verde y aceite de oliva
-C10. Rollos de lechuga con camarón, aguacate y salsa de jengibre
-C11. Crema de espárragos con aceite de oliva y almendras laminadas
-C12. Pechuga de pavo al horno con vegetales asados (brócoli, zucchini, pimiento)
+C10. Trucha al horno con ralladura de jengibre, chorrito de naranja y almendras troceadas
+C11. Crema de zanahoria y chirivía con comino + gambas salteadas con ajo y perejil
+C12. Pechuga de pavo con brócoli al vapor y rodajas de queso de cabra fundido
 C13. Ensalada griega antiinflamatoria con pollo (pepino, tomate, aceitunas, queso cabra)
-C14. Tortilla de claras con salmón ahumado y espárragos
+C14. Huevos revueltos con espinacas, acelgas, pasas y nueces tostadas
+C15. Crema rápida de calabacín, zanahoria y puerro con AOVE en crudo
+C16. Lenguado y guisantes al vapor con limón y menta
+C17. Rollos de lechuga con camarón, aguacate y salsa de jengibre
+C18. Crema de espárragos con aceite de oliva y almendras laminadas
 
 VEGETALES OBLIGATORIOS — incluir en todas las comidas (rotar preparaciones):
 Crudos: ensalada de rúcula, lechuga mixta, pepino, tomate cherry, zanahoria rallada, apio
@@ -133,25 +146,28 @@ Salteados: champiñones, pimientos, espinaca, col rizada, cebolla morada
 Asados al horno: brócoli, coliflor, zucchini, pimientos, berenjena, cebolla
 Cremas/sopas: crema de brócoli | crema de coliflor | crema de zanahoria | crema de espárragos | sopa de miso
 
-## INFUSIONES ANTIINFLAMATORIAS OBLIGATORIAS (incluir 2-3 por día en el plan)
-MAÑANA en ayunas (elegir una diferente cada día):
+## INFUSIONES ANTIINFLAMATORIAS OBLIGATORIAS (incluir en cada día, 2-3 por día — ROTAR, nunca la misma dos días seguidos)
+MAÑANA en ayunas — OBLIGATORIA, antes del desayuno (elegir una diferente cada día):
 - Agua dorada: cúrcuma + pimienta negra + jengibre rallado + limón en agua tibia
-- Té verde matcha con limón y jengibre fresco
-- Agua de canela con chía (remojar 10 min) + zumo de limón
-- Agua termogénica: jengibre + pizca de cayena + limón + agua tibia
-- Infusión de romero + menta + jengibre en agua caliente
+- Infusión de jengibre y limón: rodajas de jengibre fresco + zumo de medio limón en agua caliente
+- Té verde matcha con jengibre fresco rallado y limón
+- Agua de canela con chía: 1 palo canela hervido + 1 cdta chía remojada 10 min
+- Agua termogénica: jengibre + pizca de cayena + aceite de oliva + limón en agua tibia
+- Cúrcuma latte sin lácteos: leche de almendra/coco caliente + cúrcuma + canela + pimienta negra
 
-MEDIODÍA (elegir una diferente cada día):
+MEDIODÍA con el almuerzo o después (elegir una diferente cada día):
 - Té de jengibre con cúrcuma y miel de abeja cruda
-- Infusión de menta con limón (digestiva)
-- Agua de pepino, menta y limón
-- Té verde con jazmín (antioxidante)
+- Infusión de menta con limón (digestiva y antiinflamatoria)
+- Agua de pepino, menta y limón (2h después de comer)
+- Té verde con limón (antioxidante, antiinflamatorio)
+- Infusión de romero con limón (digestiva)
 
-NOCHE (elegir una diferente cada día):
-- Té de manzanilla con jengibre (antiinflamatorio y relajante)
-- Leche dorada de coco: leche coco caliente + cúrcuma + canela + pimienta negra
-- Infusión de tila con lavanda (relajante)
+NOCHE — OBLIGATORIA, 30-60 min antes de dormir (elegir una diferente cada día):
+- Leche dorada de coco: leche coco caliente + cúrcuma + canela + pimienta negra + miel cruda
+- Té de manzanilla con jengibre (relajante y antiinflamatorio)
+- Infusión de tila con lavanda y manzanilla (relajante profundo)
 - Té de jengibre con canela (digestivo nocturno)
+- Infusión de ashwagandha con canela y leche vegetal (adaptógeno + relajante)
 
 ## REGLAS DE VARIEDAD Y ADHERENCIA
 - CADA día debe tener recetas DIFERENTES a los otros días — nunca repetir la misma en la semana
