@@ -6,7 +6,13 @@ import { UserProfile } from '@/types'
 
 export async function POST(req: NextRequest) {
   try {
-    const profile: UserProfile = await req.json()
+    const body = await req.json()
+    const { accessCode, ...profile }: { accessCode?: string } & UserProfile = body
+
+    const validCode = process.env.ACCESS_CODE
+    if (validCode && accessCode?.trim().toUpperCase() !== validCode.trim().toUpperCase()) {
+      return NextResponse.json({ error: 'Código de acceso inválido. Solo alumnos autorizados pueden generar planes.' }, { status: 401 })
+    }
 
     if (!profile.name || !profile.age || !profile.weight || !profile.height) {
       return NextResponse.json(

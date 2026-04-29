@@ -32,10 +32,36 @@ const COMMON_INTOLERANCES = ['Fructosa', 'FODMAP', 'Histamina', 'Nightshades (so
 
 export default function IntakeForm() {
   const router = useRouter()
+  const [verified, setVerified] = useState(false)
+  const [accessCode, setAccessCode] = useState('')
+  const [codeError, setCodeError] = useState('')
+  const [codeLoading, setCodeLoading] = useState(false)
   const [step, setStep] = useState(1)
   const [profile, setProfile] = useState<UserProfile>(defaultProfile)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const handleVerifyCode = async () => {
+    if (!accessCode.trim()) return
+    setCodeLoading(true)
+    setCodeError('')
+    try {
+      const res = await fetch('/api/verify-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: accessCode }),
+      })
+      if (!res.ok) {
+        setCodeError('Código incorrecto. Verifica en tu programa de Mente y Músculo.')
+      } else {
+        setVerified(true)
+      }
+    } catch {
+      setCodeError('Error de conexión. Intenta de nuevo.')
+    } finally {
+      setCodeLoading(false)
+    }
+  }
 
   const update = (fields: Partial<UserProfile>) =>
     setProfile((p) => ({ ...p, ...fields }))
@@ -72,7 +98,7 @@ export default function IntakeForm() {
       const res = await fetch('/api/generate-plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(profile),
+        body: JSON.stringify({ ...profile, accessCode }),
       })
       if (!res.ok) {
         const data = await res.json()
@@ -90,6 +116,50 @@ export default function IntakeForm() {
   }
 
   const progress = (step / TOTAL_STEPS) * 100
+
+  if (!verified) {
+    return (
+      <div className="min-h-screen" style={{ background: '#FAFAFA' }}>
+        <header className="brand-gradient py-5 px-6 text-white text-center">
+          <p style={{ fontSize: '0.7rem', letterSpacing: '0.18em', opacity: 0.85 }}>MASTER RAY VILORIA</p>
+          <h1 style={{ fontSize: '1.35rem', fontWeight: 800, letterSpacing: '0.04em' }}>NUTRI VIRTUAL</h1>
+          <p style={{ fontSize: '0.75rem', opacity: 0.9, letterSpacing: '0.1em', fontWeight: 600 }}>MENTE Y MÚSCULO</p>
+        </header>
+        <div style={{ maxWidth: 420, margin: '0 auto', padding: '2rem 1rem' }}>
+          <div style={{ background: 'white', borderRadius: 16, boxShadow: '0 4px 24px rgba(0,0,0,0.08)', padding: '2rem', textAlign: 'center' }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>🔐</div>
+            <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#1A1A1A', marginBottom: '0.5rem' }}>Acceso Exclusivo</h2>
+            <p style={{ fontSize: '0.875rem', color: '#888', marginBottom: '1.5rem', lineHeight: 1.5 }}>
+              Esta herramienta es exclusiva para alumnos de Mente y Músculo. Ingresa el código de acceso de tu programa.
+            </p>
+            <input
+              className="input-field"
+              type="text"
+              placeholder="Código de acceso"
+              value={accessCode}
+              onChange={(e) => setAccessCode(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleVerifyCode()}
+              style={{ textAlign: 'center', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '1rem' }}
+            />
+            {codeError && (
+              <p style={{ color: '#B8241A', fontSize: '0.85rem', marginBottom: '1rem' }}>{codeError}</p>
+            )}
+            <button
+              className="btn-primary"
+              onClick={handleVerifyCode}
+              disabled={codeLoading || !accessCode.trim()}
+              style={{ width: '100%' }}
+            >
+              {codeLoading ? 'Verificando...' : 'Acceder →'}
+            </button>
+            <p style={{ fontSize: '0.75rem', color: '#BBB', marginTop: '1.25rem' }}>
+              ¿No tienes código? Únete en menteymusculo.com
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen" style={{ background: '#FAFAFA' }}>
