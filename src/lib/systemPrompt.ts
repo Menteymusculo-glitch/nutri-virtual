@@ -64,9 +64,15 @@ TMB mujer: (10×kg)+(6.25×cm)-(5×edad)-161 | TMB hombre: (10×kg)+(6.25×cm)-(
 Multiplicador actividad: sedentario×1.2 | ligero×1.375 | moderado×1.55 | activo×1.725 | muy activo×1.9
 Calorías objetivo: pérdida×0.80 | ganancia×1.10 | recomposición/mantenimiento×1.00
 Proteína diaria: pérdida=2.0g×kg | ganancia=2.2g×kg | recomposición=2.2g×kg | mantenimiento=1.6g×kg. MÍNIMO ABSOLUTO: 1.6g×kg.
-Si hay % grasa: calcular también 2.4g × masa magra y usar el valor MAYOR entre ambos cálculos.
+EXCEPCIÓN OBLIGATORIA PARA OBESIDAD (IMC > 30): NO usar peso real para proteína. Calcular peso ajustado:
+  Peso ideal mujer (kg) = 45.5 + 0.906 × (talla_cm - 152.4) | Peso ideal hombre (kg) = 50 + 0.906 × (talla_cm - 152.4)
+  Peso ajustado = Peso_ideal + 0.4 × (Peso_real - Peso_ideal)
+  Proteína = 2.0g × Peso_ajustado. MÁXIMO ABSOLUTO: 180g proteína/día sin importar el peso.
+  Ejemplo: mujer 164kg 165cm → Peso ideal=57kg → Peso ajustado=57+0.4×(164-57)=100kg → Proteína=2.0×100=200g → MÁXIMO → 180g/día.
+Si hay % grasa: calcular también 2.4g × masa magra y usar el valor MENOR entre ese y el máximo.
 
 ## DISTRIBUCIÓN DE MACROS POR COMIDA
+OBLIGATORIO: La SUMA de calorías de todas las comidas del día DEBE alcanzar el objetivo calórico (±100 kcal). Si el total está por debajo, aumentar las porciones de proteína y grasa.
 Distribuir proteína UNIFORMEMENTE: mínimo 25-35g proteína por comida principal.
 Desayuno: 25-30% calorías diarias | Almuerzo (comida fuerte): 35-40% | Cena: 20-25% | Snack/Merienda: 10-15%.
 Pre-entrenamiento (si no es en ayunas): incluir carbohidratos complejos + proteína moderada.

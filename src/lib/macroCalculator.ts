@@ -94,6 +94,7 @@ function matchFood(foodName: string): string | null {
   if (n.includes('avena') || n.includes('oat')) return 'avena'
   if (n.includes('lenteja')) return 'lenteja'
   if (n.includes('garbanzo') || n.includes('chickpea')) return 'garbanzo'
+  if (n.includes('proteina') || n.includes('whey') || n.includes('scoop') || n.includes('suero') || n.includes('guisante en polvo')) return 'proteina_polvo'
   if (n.includes('leche') && n.includes('almendra')) return 'leche_almendra'
   if (n.includes('leche') && n.includes('avena')) return 'leche_avena'
   if (n.includes('leche') && (n.includes('coco') || n.includes('coconut'))) return 'leche_coco_beb'
@@ -105,7 +106,6 @@ function matchFood(foodName: string): string | null {
   if (n.includes('aceite') && n.includes('oliva')) return 'aceite_oliva'
   if (n.includes('platano') || n.includes('banana') || n.includes('guineo')) return 'platano'
   if (n.includes('arandano') || n.includes('blueberry') || n.includes('frutos rojos') || n.includes('berr')) return 'arandano'
-  if (n.includes('proteina') || n.includes('whey') || n.includes('scoop') || n.includes('suero') || n.includes('guisante en polvo')) return 'proteina_polvo'
   return null
 }
 
