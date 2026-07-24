@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { UserProfile } from '@/types'
+import { supabaseBrowser } from '@/lib/supabase-browser'
 
 const TOTAL_STEPS = 6
 
@@ -32,36 +33,21 @@ const COMMON_INTOLERANCES = ['Fructosa', 'FODMAP', 'Histamina', 'Nightshades (so
 
 export default function IntakeForm() {
   const router = useRouter()
-  const [verified, setVerified] = useState(false)
-  const [accessCode, setAccessCode] = useState('')
-  const [codeError, setCodeError] = useState('')
-  const [codeLoading, setCodeLoading] = useState(false)
+  const [authLoading, setAuthLoading] = useState(true)
   const [step, setStep] = useState(1)
   const [profile, setProfile] = useState<UserProfile>(defaultProfile)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const handleVerifyCode = async () => {
-    if (!accessCode.trim()) return
-    setCodeLoading(true)
-    setCodeError('')
-    try {
-      const res = await fetch('/api/verify-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: accessCode }),
-      })
-      if (!res.ok) {
-        setCodeError('Código incorrecto. Verifica en tu programa de Mente y Músculo.')
+  useEffect(() => {
+    supabaseBrowser.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        router.push('/login')
       } else {
-        setVerified(true)
+        setAuthLoading(false)
       }
-    } catch {
-      setCodeError('Error de conexión. Intenta de nuevo.')
-    } finally {
-      setCodeLoading(false)
-    }
-  }
+    })
+  }, [router])
 
   const update = (fields: Partial<UserProfile>) =>
     setProfile((p) => ({ ...p, ...fields }))
@@ -98,7 +84,7 @@ export default function IntakeForm() {
       const res = await fetch('/api/generate-plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...profile, accessCode }),
+        body: JSON.stringify(profile),
       })
       if (!res.ok) {
         const data = await res.json()
@@ -117,45 +103,16 @@ export default function IntakeForm() {
 
   const progress = (step / TOTAL_STEPS) * 100
 
-  if (!verified) {
+  if (authLoading) {
     return (
-      <div className="min-h-screen" style={{ background: '#FAFAFA' }}>
+      <div className="min-h-screen" style={{ background: '#FAFAFA', display: 'flex', flexDirection: 'column' }}>
         <header className="brand-gradient py-5 px-6 text-white text-center">
           <p style={{ fontSize: '0.7rem', letterSpacing: '0.18em', opacity: 0.85 }}>MASTER RAY VILORIA</p>
           <h1 style={{ fontSize: '1.35rem', fontWeight: 800, letterSpacing: '0.04em' }}>NUTRI VIRTUAL</h1>
           <p style={{ fontSize: '0.75rem', opacity: 0.9, letterSpacing: '0.1em', fontWeight: 600 }}>MENTE Y MÚSCULO</p>
         </header>
-        <div style={{ maxWidth: 420, margin: '0 auto', padding: '2rem 1rem' }}>
-          <div style={{ background: 'white', borderRadius: 16, boxShadow: '0 4px 24px rgba(0,0,0,0.08)', padding: '2rem', textAlign: 'center' }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>🔐</div>
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#1A1A1A', marginBottom: '0.5rem' }}>Acceso Exclusivo</h2>
-            <p style={{ fontSize: '0.875rem', color: '#888', marginBottom: '1.5rem', lineHeight: 1.5 }}>
-              Esta herramienta es exclusiva para alumnos de Mente y Músculo. Ingresa el código de acceso de tu programa.
-            </p>
-            <input
-              className="input-field"
-              type="text"
-              placeholder="Código de acceso"
-              value={accessCode}
-              onChange={(e) => setAccessCode(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleVerifyCode()}
-              style={{ textAlign: 'center', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '1rem' }}
-            />
-            {codeError && (
-              <p style={{ color: '#B8241A', fontSize: '0.85rem', marginBottom: '1rem' }}>{codeError}</p>
-            )}
-            <button
-              className="btn-primary"
-              onClick={handleVerifyCode}
-              disabled={codeLoading || !accessCode.trim()}
-              style={{ width: '100%' }}
-            >
-              {codeLoading ? 'Verificando...' : 'Acceder →'}
-            </button>
-            <p style={{ fontSize: '0.75rem', color: '#BBB', marginTop: '1.25rem' }}>
-              ¿No tienes código? Únete en menteymusculo.com
-            </p>
-          </div>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <p style={{ color: '#AAA', fontSize: '0.9rem' }}>Verificando acceso...</p>
         </div>
       </div>
     )
@@ -250,16 +207,15 @@ export default function IntakeForm() {
           </div>
         </div>
 
-        <p
-          style={{
-            textAlign: 'center',
-            marginTop: '1.5rem',
-            fontSize: '0.78rem',
-            color: '#AAA',
-          }}
-        >
-          Nutri Virtual · Mente y Músculo · Master Ray Viloria
-        </p>
+        <div style={{ textAlign: 'center', marginTop: '1.5rem', display: 'flex', justifyContent: 'center', gap: '1.25rem', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.78rem', color: '#AAA' }}>Nutri Virtual · Mente y Músculo</span>
+          <button
+            onClick={async () => { await supabaseBrowser.auth.signOut(); router.push('/login') }}
+            style={{ background: 'none', border: 'none', color: '#CCC', fontSize: '0.78rem', cursor: 'pointer', textDecoration: 'underline' }}
+          >
+            Cerrar sesión
+          </button>
+        </div>
       </div>
     </div>
   )

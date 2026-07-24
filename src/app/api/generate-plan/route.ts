@@ -3,16 +3,24 @@ import { createClient } from '@supabase/supabase-js'
 import { generateMealPlan } from '@/lib/gemini'
 import { calculateShoppingList } from '@/lib/shoppingList'
 import { UserProfile } from '@/types'
+import { getServerUser, hasAccess } from '@/lib/auth-server'
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
-    const { accessCode, ...profile }: { accessCode?: string } & UserProfile = body
-
-    const validCode = process.env.ACCESS_CODE
-    if (validCode && accessCode?.trim().toUpperCase() !== validCode.trim().toUpperCase()) {
-      return NextResponse.json({ error: 'Código de acceso inválido. Solo alumnos autorizados pueden generar planes.' }, { status: 401 })
+    // Auth check
+    const user = await getServerUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Debes iniciar sesión para generar un plan.' }, { status: 401 })
     }
+    const authorized = await hasAccess(user.id, user.email ?? '')
+    if (!authorized) {
+      return NextResponse.json(
+        { error: 'No tienes acceso activo. Contacta a tu coach para activar tu cuenta. 💪' },
+        { status: 403 }
+      )
+    }
+
+    const profile: UserProfile = await req.json()
 
     if (!profile.name || !profile.age || !profile.weight || !profile.height) {
       return NextResponse.json(
@@ -45,7 +53,7 @@ export async function POST(req: NextRequest) {
     const plan = await generateMealPlan(profile)
     plan.shoppingList = calculateShoppingList(plan)
 
-    // Auto-save to Supabase (non-blocking — don't fail if DB is unavailable)
+    // Auto-save to Supabase (non-blocking)
     try {
       await supabase.from('clients').insert([{ name: profile.name, profile, plan }])
     } catch (dbErr) {
