@@ -351,7 +351,7 @@ export default function QuizIdentidad() {
               {[['Peso Ideal', 'peso', '__ kg'], ['% Grasa Ideal', 'grasa', '__%'], ['Energía /10', 'energia', '__/10']].map(([lbl, key, ph]) => (
                 <div key={key} style={{ background: 'rgba(240,236,227,.04)', border: '.5px solid rgba(201,168,76,.12)', borderRadius: 10, padding: '10px 12px' }}>
                   <div style={{ fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', color: 'rgba(201,168,76,.5)', marginBottom: 4 }}>{lbl}</div>
-                  <input value={(desires as Record<string, string>)[key]} onChange={e => setDesires(d => ({ ...d, [key]: e.target.value }))} placeholder={ph} style={{ background: 'transparent', border: 'none', borderBottom: '.5px solid rgba(201,168,76,.15)', color: '#f0ece3', fontFamily: 'inherit', fontSize: 14, fontWeight: 500, width: '100%', padding: '2px 0' }} />
+                  <input value={(desires as unknown as Record<string, string>)[key]} onChange={e => setDesires(d => ({ ...d, [key]: e.target.value }))} placeholder={ph} style={{ background: 'transparent', border: 'none', borderBottom: '.5px solid rgba(201,168,76,.15)', color: '#f0ece3', fontFamily: 'inherit', fontSize: 14, fontWeight: 500, width: '100%', padding: '2px 0' }} />
                 </div>
               ))}
             </div>
