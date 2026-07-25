@@ -22,7 +22,7 @@ export default function LoginPage() {
         password,
       })
       if (authError) {
-        setError(`Error: ${authError.message} (${authError.status ?? authError.code ?? 'sin código'})`)
+        setError('Correo o contraseña incorrectos.')
         return
       }
       router.push('/')
