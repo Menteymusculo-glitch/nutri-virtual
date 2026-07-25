@@ -35,6 +35,11 @@ export async function proxy(request: NextRequest) {
     return response
   }
 
+  // Public lead-magnet pages — no login required
+  if (pathname === '/quiz-identidad' || pathname === '/calculadora-grasa') {
+    return response
+  }
+
   if (!user) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
