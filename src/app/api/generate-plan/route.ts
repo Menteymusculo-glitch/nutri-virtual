@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: 'Debes iniciar sesión para generar un plan.' }, { status: 401 })
     }
-    const authorized = await hasAccess(user.id, user.email ?? '')
+    const authorized = await hasAccess(user.id)
     if (!authorized) {
       return NextResponse.json(
         { error: 'No tienes acceso activo. Contacta a tu coach para activar tu cuenta. 💪' },

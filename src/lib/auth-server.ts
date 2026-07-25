@@ -25,12 +25,18 @@ export async function getServerUser() {
   return user
 }
 
-export function isAdmin(email: string | null | undefined) {
-  return !!email && email === process.env.ADMIN_EMAIL
+// Check if a user has the admin role in the access table
+export async function isAdmin(userId: string): Promise<boolean> {
+  const { data } = await supabaseAdmin
+    .from('access')
+    .select('role')
+    .eq('user_id', userId)
+    .single()
+  return data?.role === 'admin'
 }
 
-export async function hasAccess(userId: string, email: string) {
-  if (isAdmin(email)) return true
+export async function hasAccess(userId: string): Promise<boolean> {
+  if (await isAdmin(userId)) return true
   const { data } = await supabaseAdmin
     .from('access')
     .select('status')

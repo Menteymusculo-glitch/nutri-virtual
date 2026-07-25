@@ -3,18 +3,18 @@ import { getServerUser, isAdmin, supabaseAdmin } from '@/lib/auth-server'
 
 export async function GET() {
   const user = await getServerUser()
-  if (!user || !isAdmin(user.email)) {
+  if (!user || !await isAdmin(user.id)) {
     return NextResponse.json({ error: 'No autorizado.' }, { status: 401 })
   }
 
   const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 })
   if (error) return NextResponse.json({ error: 'Error al obtener usuarios.' }, { status: 500 })
 
-  const { data: accessRows } = await supabaseAdmin.from('access').select('user_id, status, plan, source')
+  const { data: accessRows } = await supabaseAdmin.from('access').select('user_id, status, plan, source, role')
   const accessMap = new Map(accessRows?.map((r) => [r.user_id, r]) ?? [])
 
   const result = users
-    .filter((u) => u.email !== process.env.ADMIN_EMAIL)
+    .filter((u) => u.id !== user.id)
     .map((u) => {
       const access = accessMap.get(u.id)
       return {
@@ -22,6 +22,7 @@ export async function GET() {
         email: u.email ?? '',
         name: (u.user_metadata as Record<string, string>)?.name ?? '',
         accessStatus: access?.status ?? 'sin_acceso',
+        role: access?.role ?? 'member',
         plan: access?.plan ?? '—',
         source: access?.source ?? '—',
         createdAt: u.created_at,
@@ -34,7 +35,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const user = await getServerUser()
-  if (!user || !isAdmin(user.email)) {
+  if (!user || !await isAdmin(user.id)) {
     return NextResponse.json({ error: 'No autorizado.' }, { status: 401 })
   }
 
@@ -67,7 +68,7 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const user = await getServerUser()
-  if (!user || !isAdmin(user.email)) {
+  if (!user || !await isAdmin(user.id)) {
     return NextResponse.json({ error: 'No autorizado.' }, { status: 401 })
   }
 

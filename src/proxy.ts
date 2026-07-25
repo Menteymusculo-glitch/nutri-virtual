@@ -29,6 +29,12 @@ export async function proxy(request: NextRequest) {
     return response
   }
 
+  // Recovery links embed the token in the URL hash — the server never sees it,
+  // so the middleware must let this route through without a session check.
+  if (pathname === '/reset-password') {
+    return response
+  }
+
   if (!user) {
     return NextResponse.redirect(new URL('/login', request.url))
   }

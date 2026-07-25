@@ -9,6 +9,7 @@ interface AppUser {
   email: string
   name: string
   accessStatus: 'active' | 'inactive' | 'sin_acceso'
+  role: 'admin' | 'member'
   plan: string
   source: string
   createdAt: string
@@ -20,6 +21,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
   // Create user form
   const [showCreateForm, setShowCreateForm] = useState(false)
@@ -37,6 +39,9 @@ export default function AdminPage() {
   }
 
   useEffect(() => {
+    supabaseBrowser.auth.getUser().then(({ data: { user } }) => {
+      if (user) setCurrentUserId(user.id)
+    })
     fetchUsers().finally(() => setLoading(false))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -53,6 +58,24 @@ export default function AdminPage() {
       setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, accessStatus: newStatus } : u))
     } catch {
       alert('Error al cambiar el acceso.')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const changeRole = async (userId: string, email: string, newRole: 'admin' | 'member') => {
+    setActionLoading(userId + '-role')
+    try {
+      const res = await fetch('/api/admin/access', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, email, role: newRole }),
+      })
+      const data = await res.json()
+      if (!res.ok) { alert(data.error || 'Error al cambiar el rol.'); return }
+      setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, role: newRole } : u))
+    } catch {
+      alert('Error al cambiar el rol.')
     } finally {
       setActionLoading(null)
     }
@@ -254,7 +277,7 @@ export default function AdminPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: '#F9FAFB' }}>
-                  {['Nombre', 'Correo', 'Estado', 'Plan', 'Fuente', 'Registro', 'Acciones'].map((h) => (
+                  {['Nombre', 'Correo', 'Estado', 'Rol', 'Plan', 'Fuente', 'Registro', 'Acciones'].map((h) => (
                     <th
                       key={h}
                       style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}
@@ -286,6 +309,25 @@ export default function AdminPage() {
                       >
                         {u.accessStatus === 'active' ? '✓ Activo' : '✗ Inactivo'}
                       </span>
+                    </td>
+                    <td style={{ padding: '0.875rem 1rem' }}>
+                      <button
+                        onClick={() => changeRole(u.id, u.email, u.role === 'admin' ? 'member' : 'admin')}
+                        disabled={actionLoading === u.id + '-role'}
+                        title={u.role === 'admin' ? 'Quitar admin' : 'Dar admin'}
+                        style={{
+                          fontSize: '0.73rem',
+                          padding: '0.2rem 0.6rem',
+                          borderRadius: 6,
+                          border: `1px solid ${u.role === 'admin' ? '#7C3AED' : '#D1D5DB'}`,
+                          background: u.role === 'admin' ? '#EDE9FE' : 'white',
+                          color: u.role === 'admin' ? '#7C3AED' : '#9CA3AF',
+                          cursor: 'pointer',
+                          fontWeight: 600,
+                        }}
+                      >
+                        {actionLoading === u.id + '-role' ? '...' : u.role === 'admin' ? '★ Admin' : 'Miembro'}
+                      </button>
                     </td>
                     <td style={{ padding: '0.875rem 1rem', color: '#666', fontSize: '0.83rem', textTransform: 'capitalize' }}>
                       {u.plan}
