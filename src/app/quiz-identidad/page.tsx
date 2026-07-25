@@ -6,7 +6,7 @@ type Sex = 'mujer' | 'hombre'
 
 const DOMAINS = ['Salud','Pareja','Familia','Relaciones','Ocio','Educación','Finanzas','Rol','Evolución','Espiritualidad']
 const DOMAIN_KEYS = ['Salud','Pareja','Familia','Relaciones','Ocio','Educacion','Finanzas','Rol','Evolucion','Espiritualidad']
-const CHIPS = ['Libre','Fuerte','Serene','Auténtico/a','Poderoso/a','Seguro/a','Luminoso/a','Enraizado/a','Elegante','Natural','Constante','Valiente','Enfocado/a','En paz']
+const CHIPS = ['Libre','Fuerte','Sereno/a','Auténtico/a','Poderoso/a','Seguro/a','Luminoso/a','Enraizado/a','Elegante','Natural','Constante','Valiente','Enfocado/a','En paz']
 
 const CASCADE: Record<string, string> = {
   Salud: 'La energía física es el combustible de todos los demás dominios. Sin ella, todo lo demás cuesta el doble.',
@@ -34,10 +34,10 @@ const ACCIONES: Record<string, string[]> = {
   Espiritualidad: ['10 minutos de silencio o meditación cada mañana antes del teléfono.','Escribe una página de diario esta noche — sin filtros.','Identifica qué le da sentido profundo a tu vida más allá de los logros.','Conecta con la naturaleza esta semana — caminata, sol, silencio.'],
 }
 
-const RECOGNITION: Record<number, (name: string, sex: Sex) => string> = {
+const RECOGNITION: Record<number, (name: string, sex: Sex | '') => string> = {
   1: (name) => `Gracias, ${name}. Ya tienes tu punto de partida. Ahora vamos a mapear dónde estás realmente.`,
   2: (name, sex) => {
-    const art = sex === 'mujer' ? 'una mujer' : 'un hombre'
+    const art = sex === 'mujer' ? 'una mujer' : sex === 'hombre' ? 'un hombre' : 'alguien'
     return `${name}, este mapa lo que muestra es que eres ${art} con mucho más potencial del que estás usando ahora mismo. Eso es lo importante.`
   },
   3: (name) => `${name}, esto es clave: la distancia entre dónde estás y dónde quieres estar no es un problema de voluntad — es un problema de sistema. Y eso tiene solución.`,
@@ -159,17 +159,20 @@ export default function QuizIdentidad() {
   const goStep = (n: number) => {
     if (n > step) {
       const msg = RECOGNITION[step]
-      if (msg) setRecognition(msg(profile.nombre || 'tú', profile.sexo || 'mujer'))
+      if (msg) setRecognition(msg(profile.nombre || 'tú', profile.sexo))
     }
     setStep(n)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const sex = (profile.sexo as Sex) || 'mujer'
+  const sex = profile.sexo as Sex | ''
   const proName = profile.nombre || 'tú'
 
-  const genderWord = (fem: string, masc: string) => sex === 'mujer' ? fem : masc
-  const iAmPhrase = sex === 'mujer' ? 'Soy una mujer que' : 'Soy alguien que'
+  const genderWord = (fem: string, masc: string, neutral?: string) =>
+    sex === 'mujer' ? fem : sex === 'hombre' ? masc : (neutral ?? masc)
+  const iAmPhrase = sex === 'mujer' ? 'Soy una mujer que'
+    : sex === 'hombre' ? 'Soy un hombre que'
+    : 'Soy alguien que'
 
   const toggleChip = (w: string) => {
     setDesires(d => ({
@@ -210,7 +213,7 @@ export default function QuizIdentidad() {
 
     const h1 = horizons.h1feel || horizons.h1logro || `tu puntuación en ${p1.ds} llega a ${Math.min(10, p1.n + 2)}`
     const h5 = horizons.h5feel || horizons.h5logro || `los 3 dominios prioritarios superan el 7/10`
-    const h10 = horizons.h10logro || `eres ${genderWord('la mujer', 'la persona')} que declaraste ser: ${palabras}`
+    const h10 = horizons.h10logro || `eres ${genderWord('la mujer', 'el hombre', 'la persona')} que declaraste ser: ${palabras}`
     const timeline = `HOY\nPunto de partida real de ${proName}: ${avgN}/10. El sistema no tenía la estructura correcta.\n\n4 SEMANAS\nPrimer hábito en ${p1.ds} instalado y medible. El sistema nervioso empieza a registrar evidencia de cambio.\n\nFINAL DE ESTE AÑO\n${h1}. Las palabras "${palabras}" ya no son aspiración — son evidencia.\n\nEN 5 AÑOS\n${h5}. ${proName} ya no busca motivación — actúa desde la identidad.\n\nEN 10 AÑOS\n${h10}. El legado no es lo que acumuló — es quién se convirtió.`
 
     const bloqueos = `Los patrones que más probablemente van a frenar a ${proName}:\n\n1. EL REGRESO AL ESTADO CONOCIDO\nCómo se manifestará: después de 10-14 días de avance real, un disparador externo lleva al sistema de vuelta al estado familiar.\nSeñal de alerta: "estaba yendo bien pero..."\nIntervención: Protocolo 90 segundos — nombra el disparador, respiración 4-7-8, una acción física inmediata.\n\n2. LA PERFECCIÓN COMO EXCUSA\nCómo se manifestará: si un día falla, la mentalidad todo-o-nada convierte un traspié en abandono total.\nSeñal de alerta: "ya lo arruiné, mañana empiezo de nuevo."\nIntervención: el estándar no es la perfección — es la constancia.\n\n3. HACER EL CAMINO ${genderWord('SOLA', 'SOLO')}\nCómo se manifestará: sin accountability, sin comunidad — cuando flaquee no habrá nadie que vea su mejor versión.\nSeñal de alerta: "no quiero molestar a nadie con esto."\nIntervención: el progreso sin testigo se vuelve invisible. Comparte tu roadmap.`
@@ -346,7 +349,7 @@ export default function QuizIdentidad() {
         {/* STEP 3 — Desires */}
         {step === 3 && (
           <div>
-            <StepHeader num="3" title={`El cuerpo y la vida que ${genderWord('quieres', 'quieres')}`} sub="Cuanto más específic@ seas, más preciso será tu roadmap." />
+            <StepHeader num="3" title="El cuerpo y la vida que quieres" sub="Cuanto más específic@ seas, más preciso será tu roadmap." />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 12 }}>
               {[['Peso Ideal', 'peso', '__ kg'], ['% Grasa Ideal', 'grasa', '__%'], ['Energía /10', 'energia', '__/10']].map(([lbl, key, ph]) => (
                 <div key={key} style={{ background: 'rgba(240,236,227,.04)', border: '.5px solid rgba(201,168,76,.12)', borderRadius: 10, padding: '10px 12px' }}>
@@ -367,7 +370,7 @@ export default function QuizIdentidad() {
               <textarea value={desires.relaciones} onChange={e => setDesires(d => ({ ...d, relaciones: e.target.value }))} placeholder="Pareja, familia, amistades..." style={{ ...selStyle, resize: 'vertical', minHeight: 64 }} />
             </QField>
             <Hr />
-            <div style={{ fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', color: 'rgba(201,168,76,.65)', marginBottom: 8 }}>Palabras que {genderWord('describen a esa persona', 'te describen')}</div>
+            <div style={{ fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', color: 'rgba(201,168,76,.65)', marginBottom: 8 }}>Palabras que te describen</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
               {CHIPS.map(w => (
                 <button key={w} onClick={() => toggleChip(w)} style={{ background: desires.chips.includes(w) ? 'rgba(201,168,76,.12)' : 'rgba(240,236,227,.04)', border: `.5px solid ${desires.chips.includes(w) ? 'rgba(201,168,76,.4)' : 'rgba(201,168,76,.12)'}`, borderRadius: 20, padding: '5px 12px', fontSize: 11, color: desires.chips.includes(w) ? '#c9a84c' : 'rgba(240,236,227,.5)', cursor: 'pointer', fontFamily: 'inherit' }}>
