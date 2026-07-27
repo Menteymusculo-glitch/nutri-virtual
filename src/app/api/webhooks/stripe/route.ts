@@ -64,8 +64,11 @@ async function upsertAccess(params: {
   }
 }
 
+// Force Node.js runtime — Edge runtime can corrupt the raw body before signature verification
+export const runtime = 'nodejs'
+
 export async function POST(req: NextRequest) {
-  const rawBody = await req.text()
+  const rawBody = Buffer.from(await req.arrayBuffer())
   const signature = req.headers.get('stripe-signature')
 
   if (!signature) {
