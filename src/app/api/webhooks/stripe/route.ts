@@ -9,7 +9,9 @@ const PRICE_PLAN_MAP: Record<string, { plan: string; durationDays: number | null
   'price_1TxcbEBb2DLBnuHzRVw9O9tJ': { plan: 'training_club',    durationDays: null, recurring: true  },
   'price_1TxcyrBb2DLBnuHzycjGB5TR': { plan: 'legacy',           durationDays: 180, recurring: false },
   'price_1Txd6tBb2DLBnuHzPXCHdHEh': { plan: 'plan_equipo',      durationDays: 180, recurring: false },
-  'price_1TxcdtBb2DLBnuHzw90Kg2Vp': { plan: 'premium',         durationDays: 180, recurring: false },
+  'price_1TxcdtBb2DLBnuHzw90Kg2Vp': { plan: 'premium',          durationDays: 180, recurring: false },
+  // TEMP — solo para prueba de integración, eliminar antes del deploy final
+  'price_1TxtIuBb2DLBnuHzi22kwiIr': { plan: 'test_temp',        durationDays: 1,   recurring: false },
 }
 
 async function findOrCreateUser(email: string): Promise<string> {
