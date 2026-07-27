@@ -99,14 +99,21 @@ export async function POST(req: NextRequest) {
         const customerId = session.customer as string
         let priceId: string | undefined
 
-        if (session.mode === 'payment') {
-          const full = await stripe.checkout.sessions.retrieve(session.id, {
-            expand: ['line_items'],
-          })
-          priceId = full.line_items?.data[0]?.price?.id
-        } else if (session.mode === 'subscription') {
-          const sub = await stripe.subscriptions.retrieve(session.subscription as string)
-          priceId = sub.items.data[0]?.price?.id
+        try {
+          if (session.mode === 'payment') {
+            const full = await stripe.checkout.sessions.retrieve(session.id, {
+              expand: ['line_items'],
+            })
+            priceId = full.line_items?.data[0]?.price?.id
+          } else if (session.mode === 'subscription') {
+            const sub = await stripe.subscriptions.retrieve(session.subscription as string)
+            priceId = sub.items.data[0]?.price?.id
+          }
+        } catch (stripeErr: unknown) {
+          // Session/subscription not found — usually a test event sent against a live key (or vice versa)
+          const msg = stripeErr instanceof Error ? stripeErr.message : String(stripeErr)
+          console.warn(`[stripe-webhook] Could not retrieve Stripe object: ${msg} — skipping`)
+          break
         }
 
         if (!priceId || !PRICE_PLAN_MAP[priceId]) {
