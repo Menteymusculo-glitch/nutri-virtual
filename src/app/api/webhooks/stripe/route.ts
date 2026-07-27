@@ -121,8 +121,9 @@ export async function POST(req: NextRequest) {
           break
         }
 
+        console.log(`[stripe-webhook] resolved price_id: ${priceId ?? 'undefined'} | mode: ${session.mode}`)
         if (!priceId || !PRICE_PLAN_MAP[priceId]) {
-          console.warn(`[stripe-webhook] Unknown price_id: ${priceId} — skipping`)
+          console.warn(`[stripe-webhook] Unknown price_id: ${priceId} — skipping. Known: ${Object.keys(PRICE_PLAN_MAP).join(', ')}`)
           break
         }
 
