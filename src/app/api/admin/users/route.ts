@@ -10,7 +10,7 @@ export async function GET() {
   const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 })
   if (error) return NextResponse.json({ error: 'Error al obtener usuarios.' }, { status: 500 })
 
-  const { data: accessRows } = await supabaseAdmin.from('access').select('user_id, status, plan, source, role')
+  const { data: accessRows } = await supabaseAdmin.from('access').select('user_id, status, plan, source, role, expires_at')
   const accessMap = new Map(accessRows?.map((r) => [r.user_id, r]) ?? [])
 
   const result = users
@@ -25,6 +25,7 @@ export async function GET() {
         role: access?.role ?? 'member',
         plan: access?.plan ?? '—',
         source: access?.source ?? '—',
+        expiresAt: access?.expires_at ?? null,
         createdAt: u.created_at,
       }
     })

@@ -20,7 +20,7 @@ export async function PATCH(req: NextRequest) {
     )
   }
 
-  if (status !== undefined && !['active', 'inactive'].includes(status)) {
+  if (status !== undefined && !['active', 'inactive', 'past_due', 'expired', 'revoked'].includes(status)) {
     return NextResponse.json({ error: 'Estado inválido.' }, { status: 400 })
   }
   if (role !== undefined && !['admin', 'member'].includes(role)) {

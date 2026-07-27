@@ -4,14 +4,17 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabaseBrowser } from '@/lib/supabase-browser'
 
+type AccessStatus = 'active' | 'inactive' | 'past_due' | 'expired' | 'revoked' | 'sin_acceso'
+
 interface AppUser {
   id: string
   email: string
   name: string
-  accessStatus: 'active' | 'inactive' | 'sin_acceso'
+  accessStatus: AccessStatus
   role: 'admin' | 'member'
   plan: string
   source: string
+  expiresAt: string | null
   createdAt: string
 }
 
@@ -46,7 +49,7 @@ export default function AdminPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const changeAccess = async (userId: string, email: string, newStatus: 'active' | 'inactive') => {
+  const changeAccess = async (userId: string, email: string, newStatus: AccessStatus) => {
     setActionLoading(userId)
     try {
       const res = await fetch('/api/admin/access', {
@@ -277,7 +280,7 @@ export default function AdminPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: '#F9FAFB' }}>
-                  {['Nombre', 'Correo', 'Estado', 'Rol', 'Plan', 'Fuente', 'Registro', 'Acciones'].map((h) => (
+                  {['Nombre', 'Correo', 'Estado', 'Vence', 'Rol', 'Plan', 'Fuente', 'Registro', 'Acciones'].map((h) => (
                     <th
                       key={h}
                       style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}
@@ -297,18 +300,12 @@ export default function AdminPage() {
                       {u.email}
                     </td>
                     <td style={{ padding: '0.875rem 1rem' }}>
-                      <span
-                        style={{
-                          padding: '0.25rem 0.75rem',
-                          borderRadius: 999,
-                          fontSize: '0.75rem',
-                          fontWeight: 600,
-                          background: u.accessStatus === 'active' ? '#dcfce7' : '#fee2e2',
-                          color: u.accessStatus === 'active' ? '#16a34a' : '#B8241A',
-                        }}
-                      >
-                        {u.accessStatus === 'active' ? '✓ Activo' : '✗ Inactivo'}
-                      </span>
+                      <StatusBadge status={u.accessStatus} />
+                    </td>
+                    <td style={{ padding: '0.875rem 1rem', color: '#888', fontSize: '0.78rem', whiteSpace: 'nowrap' }}>
+                      {u.expiresAt
+                        ? new Date(u.expiresAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
+                        : u.source === 'stripe' ? '∞' : '—'}
                     </td>
                     <td style={{ padding: '0.875rem 1rem' }}>
                       <button
@@ -384,5 +381,22 @@ export default function AdminPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+function StatusBadge({ status }: { status: AccessStatus }) {
+  const map: Record<AccessStatus, { label: string; bg: string; color: string }> = {
+    active:    { label: '✓ Activo',    bg: '#dcfce7', color: '#16a34a' },
+    inactive:  { label: '⏸ Inactivo',  bg: '#F3F4F6', color: '#6B7280' },
+    past_due:  { label: '⚠ Atrasado',  bg: '#FEF3C7', color: '#B45309' },
+    expired:   { label: '⏱ Vencido',   bg: '#fee2e2', color: '#B8241A' },
+    revoked:   { label: '✗ Revocado',  bg: '#fee2e2', color: '#B8241A' },
+    sin_acceso:{ label: '— Sin acceso',bg: '#F3F4F6', color: '#9CA3AF' },
+  }
+  const { label, bg, color } = map[status] ?? map.sin_acceso
+  return (
+    <span style={{ padding: '0.25rem 0.75rem', borderRadius: 999, fontSize: '0.75rem', fontWeight: 600, background: bg, color }}>
+      {label}
+    </span>
   )
 }
