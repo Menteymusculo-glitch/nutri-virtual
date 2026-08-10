@@ -3,7 +3,10 @@ import { createClient } from '@supabase/supabase-js'
 import { generateMealPlan } from '@/lib/gemini'
 import { calculateShoppingList } from '@/lib/shoppingList'
 import { UserProfile } from '@/types'
-import { getServerUser, hasAccess } from '@/lib/auth-server'
+import { getServerUser, hasToolAccess, logUsage, supabaseAdmin } from '@/lib/auth-server'
+
+// Legacy client kept for the clients table which uses its own schema
+
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,10 +15,10 @@ export async function POST(req: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: 'Debes iniciar sesión para generar un plan.' }, { status: 401 })
     }
-    const authorized = await hasAccess(user.id)
+    const authorized = await hasToolAccess(user.id)
     if (!authorized) {
       return NextResponse.json(
-        { error: 'No tienes acceso activo. Contacta a tu coach para activar tu cuenta. 💪' },
+        { error: 'Esta herramienta es exclusiva para alumnas de M&M Training Club y Premium. Contacta a tu coach. 💪' },
         { status: 403 }
       )
     }
@@ -59,6 +62,10 @@ export async function POST(req: NextRequest) {
     } catch (dbErr) {
       console.warn('Supabase save skipped:', dbErr)
     }
+
+    // Log usage + notify Ray (non-blocking)
+    const { data: accessRow } = await supabaseAdmin.from('access').select('plan').eq('user_id', user.id).single()
+    logUsage({ userId: user.id, email: user.email ?? '', tool: 'nutri_virtual', plan: accessRow?.plan ?? 'unknown' }).catch(() => {})
 
     return NextResponse.json(plan)
   } catch (err) {

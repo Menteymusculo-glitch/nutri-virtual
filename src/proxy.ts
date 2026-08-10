@@ -35,6 +35,11 @@ export async function proxy(request: NextRequest) {
     return response
   }
 
+  // /nutrivirtual → rewrite to homepage (alias for the nutrition tool landing)
+  if (pathname === '/nutrivirtual') {
+    return NextResponse.redirect(new URL('/', request.url))
+  }
+
   // Public lead-magnet pages — no login required
   if (pathname === '/quiz-identidad' || pathname === '/calculadora-grasa') {
     return response
@@ -43,6 +48,11 @@ export async function proxy(request: NextRequest) {
   if (!user) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
+
+  // /motordeidentidad — requires active tool access (training_club or premium)
+  // We don't call hasToolAccess here (too slow in middleware); the page itself
+  // calls GET /api/identity-diagnostics which performs the real access check.
+  // The middleware only guarantees the user is logged in.
 
   return response
 }
