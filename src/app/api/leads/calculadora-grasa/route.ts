@@ -6,9 +6,11 @@ const DAX_LOCATION_ID = 'GPDmHNb3Mb2eXeXkKCaX'
 async function upsertDaxContact(nombre: string, email: string, telefono: string) {
   const apiKey = process.env.DAX_API_KEY
   if (!apiKey) {
-    console.warn('[leads/calculadora-grasa] DAX_API_KEY not set — skipping DAX upsert')
+    console.error('[leads/calculadora-grasa] DAX_API_KEY env var is not set — contact NOT created in DAX')
     return
   }
+
+  console.log(`[leads/calculadora-grasa] Calling DAX upsert for ${email}`)
 
   const res = await fetch('https://services.leadconnectorhq.com/contacts/upsert', {
     method: 'POST',
@@ -26,12 +28,14 @@ async function upsertDaxContact(nombre: string, email: string, telefono: string)
     }),
   })
 
+  const responseBody = await res.text().catch(() => '')
+
   if (!res.ok) {
-    const body = await res.text().catch(() => '')
-    console.error(`[leads/calculadora-grasa] DAX upsert failed ${res.status}: ${body}`)
+    console.error(`[leads/calculadora-grasa] DAX upsert FAILED — status: ${res.status} — body: ${responseBody}`)
   } else {
-    const data = await res.json().catch(() => null)
-    console.log(`[leads/calculadora-grasa] DAX upsert OK — contact id: ${data?.contact?.id ?? 'unknown'}`)
+    let contactId = 'unknown'
+    try { contactId = JSON.parse(responseBody)?.contact?.id ?? 'unknown' } catch { /* noop */ }
+    console.log(`[leads/calculadora-grasa] DAX upsert OK — status: ${res.status} — contact id: ${contactId}`)
   }
 }
 
@@ -88,10 +92,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Error al guardar. Intenta de nuevo.' }, { status: 500 })
   }
 
-  // 2. Upsert contact in DAX + tag (non-blocking — DAX failure doesn't affect user)
-  upsertDaxContact(normalizedNombre, normalizedEmail, normalizedTelefono).catch((err) => {
-    console.error('[leads/calculadora-grasa] DAX upsert threw:', err)
-  })
+  // 2. Upsert contact in DAX + tag
+  // Must be awaited — Vercel serverless terminates as soon as the response is sent,
+  // so fire-and-forget fetch() is killed before it completes.
+  // DAX failure is caught and logged but does NOT block the 200 OK to the user.
+  try {
+    await upsertDaxContact(normalizedNombre, normalizedEmail, normalizedTelefono)
+  } catch (err) {
+    // Already logged inside upsertDaxContact; catch here so we still return 200
+    console.error('[leads/calculadora-grasa] DAX upsert threw unexpectedly:', err)
+  }
 
   return NextResponse.json({ ok: true })
 }
