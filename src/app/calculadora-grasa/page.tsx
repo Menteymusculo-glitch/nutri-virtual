@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { supabaseBrowser } from '@/lib/supabase-browser'
 
 type Gender = 'female' | 'male'
 
@@ -72,6 +73,12 @@ const CAT_COLORS: Record<string, string> = {
 }
 
 export default function CalculadoraGrasa() {
+  // Session detection
+  const [sessionChecked, setSessionChecked] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [sessionEmail, setSessionEmail] = useState<string | null>(null)
+
+  // Form inputs
   const [gender, setGender] = useState<Gender | ''>('')
   const [age, setAge] = useState('')
   const [weight, setWeight] = useState('')
@@ -80,14 +87,44 @@ export default function CalculadoraGrasa() {
   const [waist, setWaist] = useState('')
   const [hip, setHip] = useState('')
 
-  // Email gate
-  const [email, setEmail] = useState('')
-  const [emailSubmitting, setEmailSubmitting] = useState(false)
-  const [emailError, setEmailError] = useState('')
-  const [showEmailGate, setShowEmailGate] = useState(false)
+  // Lead gate fields
+  const [leadNombre, setLeadNombre] = useState('')
+  const [leadEmail, setLeadEmail] = useState('')
+  const [leadTelefono, setLeadTelefono] = useState('')
+  const [leadConsent, setLeadConsent] = useState(false)
+  const [leadSubmitting, setLeadSubmitting] = useState(false)
+  const [leadError, setLeadError] = useState('')
+  const [showLeadGate, setShowLeadGate] = useState(false)
 
   const [result, setResult] = useState<CalcResult | null>(null)
   const [formError, setFormError] = useState('')
+  const [showResult, setShowResult] = useState(false)
+
+  // Detect Supabase Auth session on mount
+  useEffect(() => {
+    supabaseBrowser.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setIsLoggedIn(true)
+        setSessionEmail(session.user.email ?? null)
+      }
+      setSessionChecked(true)
+    })
+  }, [])
+
+  const buildDatos = (r: CalcResult) => ({
+    genero: gender,
+    age: parseFloat(age),
+    peso: parseFloat(weight),
+    altura: parseFloat(height),
+    cuello: parseFloat(neck),
+    cintura: parseFloat(waist),
+    cadera: gender === 'female' ? parseFloat(hip) : undefined,
+    bf: parseFloat(r.bf.toFixed(2)),
+    masa_grasa: parseFloat(r.fatMass.toFixed(2)),
+    masa_magra: parseFloat(r.leanMass.toFixed(2)),
+    categoria: r.category.name,
+    fuera_de_rango: r.outOfRange,
+  })
 
   const calculate = (e: React.FormEvent) => {
     e.preventDefault()
@@ -121,54 +158,74 @@ export default function CalculadoraGrasa() {
     const outOfRange = rawBf < 3 || rawBf > 60
     const clampedBf = Math.min(60, Math.max(3, rawBf))
     const bf = outOfRange ? clampedBf : rawBf
-
     const fatMass = w * (bf / 100)
     const leanMass = w - fatMass
     const category = getCategory(bf, g)
+    const newResult = { bf, fatMass, leanMass, category, outOfRange, clampedBf }
+    setResult(newResult)
 
-    setResult({ bf, fatMass, leanMass, category, outOfRange, clampedBf })
-    setShowEmailGate(true)
-    setTimeout(() => document.getElementById('email-gate')?.scrollIntoView({ behavior: 'smooth' }), 100)
-  }
-
-  const submitEmail = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!result) return
-    setEmailError('')
-    setEmailSubmitting(true)
-    try {
-      const res = await fetch('/api/leads', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          tipo: 'calculadora_grasa',
-          datos: {
-            gender,
-            age: parseFloat(age),
-            weight: parseFloat(weight),
-            height: parseFloat(height),
-            neck: parseFloat(neck),
-            waist: parseFloat(waist),
-            hip: gender === 'female' ? parseFloat(hip) : undefined,
-            bf: result.bf,
-            fatMass: result.fatMass,
-            leanMass: result.leanMass,
-            category: result.category.name,
-            outOfRange: result.outOfRange,
-          },
-        }),
-      })
-      if (!res.ok) throw new Error()
-      setShowEmailGate(false)
-    } catch {
-      setEmailError('Error al guardar. Intenta de nuevo.')
-    } finally {
-      setEmailSubmitting(false)
+    if (isLoggedIn) {
+      // Logged-in alumna/o: show result immediately, log lead silently in background
+      setShowResult(true)
+      if (sessionEmail) {
+        fetch('/api/leads/calculadora-grasa', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nombre: sessionEmail.split('@')[0], // best-effort, non-blocking
+            email: sessionEmail,
+            telefono: 'N/A',
+            consentimiento: true, // ya es alumna/o registrada/o
+            datos: buildDatos(newResult),
+          }),
+        }).catch(() => {}) // fully non-blocking, never shown to user
+      }
+    } else {
+      // Anonymous visitor: show lead gate
+      setShowLeadGate(true)
+      setShowResult(false)
+      setTimeout(() => document.getElementById('lead-gate')?.scrollIntoView({ behavior: 'smooth' }), 100)
     }
   }
 
-  const showResult = result && !showEmailGate
+  const submitLead = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!result) return
+    setLeadError('')
+    setLeadSubmitting(true)
+    try {
+      const res = await fetch('/api/leads/calculadora-grasa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre: leadNombre.trim(),
+          email: leadEmail.trim(),
+          telefono: leadTelefono.trim(),
+          consentimiento: leadConsent,
+          datos: buildDatos(result),
+        }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error ?? 'Error al guardar.')
+      }
+      setShowLeadGate(false)
+      setShowResult(true)
+    } catch (err) {
+      setLeadError(err instanceof Error ? err.message : 'Error al guardar. Intenta de nuevo.')
+    } finally {
+      setLeadSubmitting(false)
+    }
+  }
+
+  // Don't render until session is checked (avoids flash of gate for logged-in users)
+  if (!sessionChecked) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: '#aaa', fontSize: 14 }}>Cargando...</div>
+      </div>
+    )
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)', padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -220,26 +277,63 @@ export default function CalculadoraGrasa() {
           <button type="submit" style={btnStyle}>Calcular Mi Composición Corporal</button>
         </form>
 
-        {/* Email gate */}
-        {showEmailGate && result && (
-          <div id="email-gate" style={{ marginTop: 30, padding: 28, background: 'linear-gradient(135deg,#fff5e6,#ffe8d1)', borderRadius: 15, border: '2px solid #FFD700' }}>
-            <div style={{ textAlign: 'center', marginBottom: 16 }}>
+        {/* Lead capture gate — only for visitors without session */}
+        {showLeadGate && result && !isLoggedIn && (
+          <div id="lead-gate" style={{ marginTop: 30, padding: 28, background: 'linear-gradient(135deg,#fff5e6,#ffe8d1)', borderRadius: 15, border: '2px solid #FFD700' }}>
+            <div style={{ textAlign: 'center', marginBottom: 20 }}>
               <div style={{ fontSize: 36, marginBottom: 8 }}>📊</div>
-              <h3 style={{ fontSize: 18, fontWeight: 700, color: '#2d3748', marginBottom: 6 }}>Tu resultado está listo</h3>
-              <p style={{ fontSize: 14, color: '#4a5568' }}>Ingresa tu email para ver tu análisis completo y recibir consejos personalizados de Ray.</p>
+              <h3 style={{ fontSize: 20, fontWeight: 700, color: '#2d3748', marginBottom: 8 }}>¡Tu resultado está listo!</h3>
+              <p style={{ fontSize: 14, color: '#4a5568', lineHeight: 1.6 }}>
+                Ingresa tus datos para ver tu análisis completo y recibir consejos personalizados de Ray.
+              </p>
             </div>
-            <form onSubmit={submitEmail} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <input
-                style={inputStyle}
-                type="email"
-                placeholder="tu@email.com"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-              />
-              {emailError && <p style={{ color: '#DC143C', fontSize: 13 }}>{emailError}</p>}
-              <button type="submit" disabled={emailSubmitting} style={btnStyle}>
-                {emailSubmitting ? 'Guardando...' : 'Ver mi resultado →'}
+            <form onSubmit={submitLead} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <Field label="Nombre *">
+                <input
+                  style={inputStyle}
+                  type="text"
+                  placeholder="Tu nombre"
+                  value={leadNombre}
+                  onChange={e => setLeadNombre(e.target.value)}
+                  required
+                />
+              </Field>
+              <Field label="Email *">
+                <input
+                  style={inputStyle}
+                  type="email"
+                  placeholder="tu@email.com"
+                  value={leadEmail}
+                  onChange={e => setLeadEmail(e.target.value)}
+                  required
+                />
+              </Field>
+              <Field label="WhatsApp / Teléfono *" hint="Incluye el código de país si es internacional (ej: +58 412...)">
+                <input
+                  style={inputStyle}
+                  type="tel"
+                  placeholder="+58 412 000 0000"
+                  value={leadTelefono}
+                  onChange={e => setLeadTelefono(e.target.value)}
+                  required
+                />
+              </Field>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', fontSize: 13, color: '#4a5568', lineHeight: 1.5 }}>
+                <input
+                  type="checkbox"
+                  checked={leadConsent}
+                  onChange={e => setLeadConsent(e.target.checked)}
+                  style={{ marginTop: 2, flexShrink: 0, width: 16, height: 16, cursor: 'pointer' }}
+                  required
+                />
+                <span>
+                  Acepto recibir contenido y ofertas de Mente y Músculo por email y WhatsApp.
+                  {' '}<span style={{ color: '#a0aec0' }}>Puedes darte de baja en cualquier momento.</span>
+                </span>
+              </label>
+              {leadError && <p style={{ color: '#DC143C', fontSize: 13, background: '#fff5f5', padding: '8px 12px', borderRadius: 8 }}>{leadError}</p>}
+              <button type="submit" disabled={leadSubmitting || !leadConsent} style={{ ...btnStyle, opacity: (!leadConsent || leadSubmitting) ? 0.7 : 1, cursor: (!leadConsent || leadSubmitting) ? 'not-allowed' : 'pointer' }}>
+                {leadSubmitting ? 'Guardando...' : 'Ver mi resultado →'}
               </button>
             </form>
           </div>
