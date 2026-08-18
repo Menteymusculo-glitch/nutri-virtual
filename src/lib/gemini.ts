@@ -14,13 +14,13 @@ export async function generateMealPlan(profile: UserProfile): Promise<MealPlan> 
   let completion
   try {
     completion = await groq.chat.completions.create({
-    model: 'llama-3.1-70b-versatile',
+    model: 'llama3-70b-8192',
     messages: [
       { role: 'system', content: buildSystemPrompt() },
       { role: 'user', content: buildUserPrompt(profile) },
     ],
     temperature: 0.7,
-    max_tokens: 7500,
+    max_tokens: 6000,
     response_format: { type: 'json_object' },
   })
   } catch (err: unknown) {
