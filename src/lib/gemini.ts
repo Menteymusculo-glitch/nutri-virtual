@@ -34,15 +34,31 @@ export async function generateMealPlan(profile: UserProfile): Promise<MealPlan> 
 
   const responseText = completion.choices[0]?.message?.content ?? ''
 
+  // Log first 300 chars to diagnose model output format
+  console.log('[gemini] model response preview:', responseText.slice(0, 300))
+
   let parsed: MealPlan
   try {
     parsed = JSON.parse(responseText)
   } catch {
-    const match = responseText.match(/\{[\s\S]*\}/)
-    if (!match) {
-      throw new Error('El modelo no devolvió JSON válido. Intenta de nuevo.')
+    // Strip markdown code fences if present: ```json ... ``` or ``` ... ```
+    const stripped = responseText
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```\s*$/i, '')
+      .trim()
+
+    // Try parsing the stripped version first
+    try {
+      parsed = JSON.parse(stripped)
+    } catch {
+      // Last resort: extract the first {...} block
+      const match = stripped.match(/\{[\s\S]*\}/)
+      if (!match) {
+        console.error('[gemini] full response (unparseable):', responseText.slice(0, 1000))
+        throw new Error('El modelo no devolvió JSON válido. Intenta de nuevo.')
+      }
+      parsed = JSON.parse(match[0])
     }
-    parsed = JSON.parse(match[0])
   }
 
   parsed.generatedAt = new Date().toISOString()
