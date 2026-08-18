@@ -14,15 +14,14 @@ export async function generateMealPlan(profile: UserProfile): Promise<MealPlan> 
   let completion
   try {
     completion = await groq.chat.completions.create({
-    model: 'openai/gpt-oss-120b',
+    model: 'qwen/qwen3.6-27b',
     messages: [
       { role: 'system', content: buildSystemPrompt() },
       { role: 'user', content: buildUserPrompt(profile) },
     ],
     temperature: 0.7,
     max_tokens: 10000,
-    // response_format omitted — openai/gpt-oss-120b rejects json_object mode.
-    // System prompt already instructs "Responde SOLO con JSON válido".
+    response_format: { type: 'json_object' },
   })
   } catch (err: unknown) {
     const status = (err as { status?: number })?.status
