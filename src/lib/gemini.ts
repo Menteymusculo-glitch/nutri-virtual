@@ -21,7 +21,8 @@ export async function generateMealPlan(profile: UserProfile): Promise<MealPlan> 
     ],
     temperature: 0.7,
     max_tokens: 6000,
-    response_format: { type: 'json_object' },
+    // response_format omitted — openai/gpt-oss-120b rejects json_object mode.
+    // System prompt already instructs "Responde SOLO con JSON válido".
   })
   } catch (err: unknown) {
     const status = (err as { status?: number })?.status
