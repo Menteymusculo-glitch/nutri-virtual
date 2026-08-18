@@ -14,7 +14,7 @@ export async function generateMealPlan(profile: UserProfile): Promise<MealPlan> 
   let completion
   try {
     completion = await groq.chat.completions.create({
-    model: 'llama-3.3-70b-versatile',
+    model: 'llama-3.1-70b-versatile',
     messages: [
       { role: 'system', content: buildSystemPrompt() },
       { role: 'user', content: buildUserPrompt(profile) },
