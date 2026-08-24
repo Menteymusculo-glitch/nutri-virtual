@@ -31,8 +31,11 @@ export default function AdminPage() {
   const [newEmail, setNewEmail] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [newName, setNewName] = useState('')
+  const [newPlan, setNewPlan] = useState('training_club')
   const [createLoading, setCreateLoading] = useState(false)
   const [createMsg, setCreateMsg] = useState<{ text: string; ok: boolean } | null>(null)
+
+  const TOOL_PLANS = ['training_club', 'premium']
 
   const fetchUsers = async () => {
     const res = await fetch('/api/admin/users')
@@ -110,17 +113,18 @@ export default function AdminPage() {
       const res = await fetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: newEmail, password: newPassword, name: newName }),
+        body: JSON.stringify({ email: newEmail, password: newPassword, name: newName, plan: newPlan }),
       })
       const data = await res.json()
       if (!res.ok) {
         setCreateMsg({ text: data.error || 'Error al crear la cuenta.', ok: false })
         return
       }
-      setCreateMsg({ text: `✓ Cuenta creada para ${newEmail}`, ok: true })
+      setCreateMsg({ text: `✓ Cuenta creada para ${newEmail} (plan: ${newPlan})`, ok: true })
       setNewEmail('')
       setNewPassword('')
       setNewName('')
+      setNewPlan('training_club')
       setShowCreateForm(false)
       await fetchUsers()
     } catch {
@@ -209,7 +213,7 @@ export default function AdminPage() {
           {showCreateForm && (
             <form onSubmit={createUser}>
               <div
-                style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}
+                style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}
               >
                 <div>
                   <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#555', marginBottom: '0.3rem', textTransform: 'uppercase' }}>
@@ -249,7 +253,30 @@ export default function AdminPage() {
                     minLength={8}
                   />
                 </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#555', marginBottom: '0.3rem', textTransform: 'uppercase' }}>
+                    Plan
+                  </label>
+                  <select
+                    className="input-field"
+                    value={newPlan}
+                    onChange={(e) => setNewPlan(e.target.value)}
+                    style={{ width: '100%' }}
+                  >
+                    <option value="training_club">Training Club ✅</option>
+                    <option value="premium">Premium ✅</option>
+                    <option value="gym_virtual_core">Gym Virtual Core</option>
+                    <option value="legacy">Legacy</option>
+                    <option value="plan_equipo">Plan Equipo</option>
+                    <option value="manual">Manual (sin herramientas)</option>
+                  </select>
+                </div>
               </div>
+              {!TOOL_PLANS.includes(newPlan) && (
+                <p style={{ fontSize: '0.8rem', color: '#B8241A', marginBottom: '0.75rem' }}>
+                  ⚠️ Este plan <strong>no tiene acceso</strong> a Nutri Virtual ni Motor de Identidad. Elige Training Club o Premium para acceso completo.
+                </p>
+              )}
 
               {createMsg && (
                 <p style={{ color: createMsg.ok ? '#16a34a' : '#B8241A', fontSize: '0.85rem', marginBottom: '0.75rem' }}>

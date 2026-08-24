@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No autorizado.' }, { status: 401 })
   }
 
-  const { email, password, name } = await req.json()
+  const { email, password, name, plan } = await req.json()
   if (!email || !password) {
     return NextResponse.json({ error: 'Correo y contraseña son requeridos.' }, { status: 400 })
   }
@@ -56,11 +56,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: createError.message }, { status: 400 })
   }
 
+  const VALID_PLANS = ['training_club', 'premium', 'gym_virtual_core', 'legacy', 'plan_equipo', 'manual']
+  const resolvedPlan = plan && VALID_PLANS.includes(plan) ? plan : 'training_club'
+
   await supabaseAdmin.from('access').insert({
     user_id: newUser.user.id,
     email: email.trim().toLowerCase(),
     status: 'active',
-    plan: 'manual',
+    plan: resolvedPlan,
     source: 'manual',
   })
 

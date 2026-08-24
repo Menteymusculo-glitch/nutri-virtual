@@ -7,7 +7,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'No autorizado.' }, { status: 401 })
   }
 
-  const { userId, email, status, role } = await req.json()
+  const { userId, email, status, role, plan } = await req.json()
   if (!userId) {
     return NextResponse.json({ error: 'userId requerido.' }, { status: 400 })
   }
@@ -45,7 +45,7 @@ export async function PATCH(req: NextRequest) {
       email: email ?? '',
       status: status ?? 'active',
       role: role ?? 'member',
-      plan: 'manual',
+      plan: plan ?? 'manual',
       source: 'manual',
     })
   }
