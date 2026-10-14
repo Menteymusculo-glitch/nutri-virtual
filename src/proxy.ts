@@ -35,13 +35,25 @@ export async function proxy(request: NextRequest) {
     return response
   }
 
-  // /nutrivirtual → rewrite to homepage (alias for the nutrition tool landing)
+  // /nutrivirtual → alias for the nutrition tool landing (moved off '/' when
+  // '/' became the public marketing homepage)
   if (pathname === '/nutrivirtual') {
-    return NextResponse.redirect(new URL('/', request.url))
+    return NextResponse.redirect(new URL('/plan-nutricional', request.url))
+  }
+
+  // Public marketing homepage — no login required. Logged-in users see a
+  // "go to my dashboard" CTA instead of the sales pitch (handled in the page).
+  if (pathname === '/') {
+    return response
   }
 
   // Public lead-magnet pages — no login required
   if (pathname === '/quiz-identidad' || pathname === '/calculadora-grasa') {
+    return response
+  }
+
+  // Public legal pages — no login required
+  if (pathname === '/privacidad' || pathname === '/terminos') {
     return response
   }
 
