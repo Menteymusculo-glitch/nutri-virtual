@@ -3,8 +3,9 @@ import { supabaseAdmin } from '@/lib/auth-server'
 
 // DAX product slug → internal plan name
 const DAX_PLAN_MAP: Record<string, string> = {
-  training_club: 'training_club',
-  premium:       'premium',
+  training_club:    'training_club',
+  premium:          'premium',
+  gym_virtual_core: 'gym_virtual_core',
 }
 
 async function findOrCreateUser(email: string): Promise<string> {
