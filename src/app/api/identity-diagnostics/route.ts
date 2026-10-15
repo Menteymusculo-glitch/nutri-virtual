@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerUser, hasToolAccess, logUsage, supabaseAdmin } from '@/lib/auth-server'
+import { getServerUser, hasIdentityAccess, logUsage, supabaseAdmin } from '@/lib/auth-server'
 
 // GET — fetch latest diagnostic for the current user
 export async function GET() {
   const user = await getServerUser()
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const access = await hasToolAccess(user.id)
+  const access = await hasIdentityAccess(user.id)
   if (!access) return NextResponse.json({ error: 'Sin acceso a esta herramienta' }, { status: 403 })
 
   const { data } = await supabaseAdmin
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   const user = await getServerUser()
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const access = await hasToolAccess(user.id)
+  const access = await hasIdentityAccess(user.id)
   if (!access) return NextResponse.json({ error: 'Sin acceso a esta herramienta' }, { status: 403 })
 
   const body = await req.json()

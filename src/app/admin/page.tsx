@@ -35,7 +35,10 @@ export default function AdminPage() {
   const [createLoading, setCreateLoading] = useState(false)
   const [createMsg, setCreateMsg] = useState<{ text: string; ok: boolean } | null>(null)
 
-  const TOOL_PLANS = ['training_club', 'premium']
+  // Plans with Motor de Identidad access (full tool access)
+  const IDENTITY_PLANS = ['training_club', 'premium']
+  // Plans with Nutri Virtual access only
+  const NUTRI_ONLY_PLANS = ['gym_virtual_core']
 
   const fetchUsers = async () => {
     const res = await fetch('/api/admin/users')
@@ -272,9 +275,14 @@ export default function AdminPage() {
                   </select>
                 </div>
               </div>
-              {!TOOL_PLANS.includes(newPlan) && (
+              {NUTRI_ONLY_PLANS.includes(newPlan) && (
+                <p style={{ fontSize: '0.8rem', color: '#B07800', marginBottom: '0.75rem' }}>
+                  ⚠️ Gym Virtual Core: acceso a <strong>Nutri Virtual</strong> pero <strong>NO al Motor de Identidad</strong>. Para acceso completo elige Training Club o Premium.
+                </p>
+              )}
+              {!IDENTITY_PLANS.includes(newPlan) && !NUTRI_ONLY_PLANS.includes(newPlan) && (
                 <p style={{ fontSize: '0.8rem', color: '#B8241A', marginBottom: '0.75rem' }}>
-                  ⚠️ Este plan <strong>no tiene acceso</strong> a Nutri Virtual ni Motor de Identidad. Elige Training Club o Premium para acceso completo.
+                  ⚠️ Este plan <strong>no tiene acceso</strong> a ninguna herramienta IA. Elige Training Club o Premium para acceso completo.
                 </p>
               )}
 

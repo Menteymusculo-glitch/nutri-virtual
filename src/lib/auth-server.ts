@@ -8,8 +8,11 @@ export const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_KEY!
 )
 
-// Plans that unlock the nutrition tools (Nutri Virtual + Motor de Identidad)
-export const TOOL_PLANS = ['training_club', 'premium'] as const
+// Re-export from dax-logic so auth-server is the single import for callers
+export { NUTRI_PLANS, IDENTITY_PLANS } from '@/lib/dax-logic'
+import { NUTRI_PLANS, IDENTITY_PLANS } from '@/lib/dax-logic'
+// Backward-compat alias — same as NUTRI_PLANS
+export const TOOL_PLANS = NUTRI_PLANS
 
 // Read current session user from cookies — use in API route handlers
 export async function getServerUser() {
@@ -48,15 +51,31 @@ export async function hasAccess(userId: string): Promise<boolean> {
   return data?.status === 'active'
 }
 
-// Gate for Nutri Virtual + Motor de Identidad — requires training_club or premium
-export async function hasToolAccess(userId: string): Promise<boolean> {
+// Gate for Nutri Virtual — training_club, premium, or gym_virtual_core
+export async function hasNutriAccess(userId: string): Promise<boolean> {
   if (await isAdmin(userId)) return true
   const { data } = await supabaseAdmin
     .from('access')
     .select('status, plan')
     .eq('user_id', userId)
     .single()
-  return data?.status === 'active' && TOOL_PLANS.includes(data?.plan as typeof TOOL_PLANS[number])
+  return data?.status === 'active' && NUTRI_PLANS.includes(data?.plan as typeof NUTRI_PLANS[number])
+}
+
+// Gate for Motor de Identidad — training_club or premium only (not gym_virtual_core)
+export async function hasIdentityAccess(userId: string): Promise<boolean> {
+  if (await isAdmin(userId)) return true
+  const { data } = await supabaseAdmin
+    .from('access')
+    .select('status, plan')
+    .eq('user_id', userId)
+    .single()
+  return data?.status === 'active' && IDENTITY_PLANS.includes(data?.plan as typeof IDENTITY_PLANS[number])
+}
+
+// Backward-compat alias — same as hasNutriAccess
+export async function hasToolAccess(userId: string): Promise<boolean> {
+  return hasNutriAccess(userId)
 }
 
 // Log a tool usage event — writes to usage_log + stub console notification
