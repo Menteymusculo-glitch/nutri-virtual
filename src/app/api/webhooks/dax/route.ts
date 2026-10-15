@@ -68,16 +68,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  let body: { event_id?: string; type?: string; email?: string; product?: string }
+  let body: Record<string, unknown>
   try {
     body = await req.json()
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
-  const { event_id, type, email, product } = body
+  // DAX may send custom fields at the root OR nested inside customData.
+  // Root takes precedence; customData is the fallback.
+  const cd = (body.customData && typeof body.customData === 'object')
+    ? body.customData as Record<string, unknown>
+    : {}
+
+  const event_id = (body.event_id ?? cd.event_id) as string | undefined
+  const type     = (body.type     ?? cd.type)     as string | undefined
+  const email    = (body.email    ?? cd.email)     as string | undefined
+  const product  = (body.product  ?? cd.product)   as string | undefined
 
   if (!event_id || !type || !email || !product) {
+    console.error(
+      '[dax-webhook] 400 — campos recibidos en root:',   Object.keys(body),
+      '| en customData:', Object.keys(cd),
+    )
     return NextResponse.json({ error: 'Missing required fields: event_id, type, email, product' }, { status: 400 })
   }
 
