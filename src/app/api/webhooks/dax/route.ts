@@ -115,10 +115,11 @@ export async function POST(req: NextRequest) {
     if (type === 'subscription_created') {
       const userId = await findOrCreateUser(normalizedEmail)
 
-      // Upsert in dax_subscriptions (one row per user+plan)
+      // Upsert in dax_subscriptions — email is already lowercased, so (email,plan)
+      // uniqueness is guaranteed even when user_id is NULL (ON DELETE SET NULL).
       await supabaseAdmin.from('dax_subscriptions').upsert(
         { user_id: userId, email: normalizedEmail, plan, status: 'active', updated_at: new Date().toISOString() },
-        { onConflict: 'user_id,plan' }
+        { onConflict: 'email,plan' }
       )
 
       await applyEffectivePlan(userId, normalizedEmail)
