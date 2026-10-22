@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabaseBrowser } from '@/lib/supabase-browser'
+import { parseRecoveryLink } from '@/lib/authRedirect'
 
 export default function ResetPasswordPage() {
   const router = useRouter()
@@ -15,8 +16,26 @@ export default function ResetPasswordPage() {
   const [invalidLink, setInvalidLink] = useState(false)
 
   useEffect(() => {
-    // Supabase processes the recovery token from the URL hash and fires
-    // PASSWORD_RECOVERY — we must wait for it before showing the form.
+    const link = parseRecoveryLink(window.location.search, window.location.hash)
+
+    // Enlace con token_hash (plantilla de correo de Supabase): se verifica aquí mismo,
+    // así funciona aunque se abra en otro navegador o en el móvil. El token es de un
+    // solo uso; lo quitamos de la URL para que no quede en el historial.
+    if (link.kind === 'token_hash') {
+      window.history.replaceState(null, '', window.location.pathname)
+      supabaseBrowser.auth.verifyOtp({ token_hash: link.tokenHash, type: 'recovery' }).then(({ error: otpError }) => {
+        if (otpError) setInvalidLink(true)
+        else setReady(true)
+      })
+      return
+    }
+    if (link.kind === 'error') {
+      Promise.resolve().then(() => setInvalidLink(true))
+      return
+    }
+
+    // Enlace antiguo (?code=… de PKCE): el cliente lo canjea solo y emite
+    // PASSWORD_RECOVERY, pero únicamente en el navegador que pidió el enlace.
     const { data: { subscription } } = supabaseBrowser.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
         setReady(true)
@@ -90,7 +109,7 @@ export default function ResetPasswordPage() {
                 Link inválido o expirado
               </h2>
               <p style={{ fontSize: '0.875rem', color: '#888', marginBottom: '1.5rem' }}>
-                Los links de recuperación expiran después de unos minutos. Solicita uno nuevo desde el login.
+                Los links de recuperación caducan pasado un tiempo y solo sirven una vez. Solicita uno nuevo desde el login.
               </p>
               <button
                 className="btn-primary"

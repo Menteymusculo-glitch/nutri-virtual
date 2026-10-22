@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabaseBrowser } from '@/lib/supabase-browser'
+import { recoveryRedirect } from '@/lib/authRedirect'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -48,7 +49,7 @@ export default function LoginPage() {
     try {
       const { error: resetError } = await supabaseBrowser.auth.resetPasswordForEmail(
         forgotEmail.trim().toLowerCase(),
-        { redirectTo: 'https://nutri-virtual.vercel.app/reset-password' }
+        { redirectTo: recoveryRedirect(window.location.origin) }
       )
       if (resetError) {
         setForgotMsg({ text: 'Error al enviar el correo. Intenta de nuevo.', ok: false })

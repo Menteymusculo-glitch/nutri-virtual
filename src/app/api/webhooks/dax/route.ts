@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/auth-server'
+import { appUrl } from '@/lib/authRedirect'
 import { computeEffectivePlan, determineAccessAction, PLAN_RANK } from '@/lib/dax-logic'
 
 // DAX product slug → internal plan name (add new products here only)
@@ -14,11 +15,7 @@ async function findOrCreateUser(email: string): Promise<string> {
   const existing = users.find((u) => u.email?.toLowerCase() === email)
   if (existing) return existing.id
 
-  const redirectTo = process.env.NEXT_PUBLIC_APP_URL
-    ? `${process.env.NEXT_PUBLIC_APP_URL}/nutrivirtual`
-    : 'https://herramientas.menteymusculo.com/nutrivirtual'
-
-  const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, { redirectTo })
+  const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, { redirectTo: appUrl('/nutrivirtual') })
   if (error || !data.user) throw new Error(`inviteUserByEmail failed: ${error?.message}`)
   return data.user.id
 }
