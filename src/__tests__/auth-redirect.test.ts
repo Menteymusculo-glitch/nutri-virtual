@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { appUrl, recoveryRedirect, parseRecoveryLink, DEFAULT_APP_URL } from '@/lib/authRedirect'
+import { appUrl, recoveryRedirect, parseRecoveryLink, parseEmailLink, INVITE_PATH, DEFAULT_APP_URL } from '@/lib/authRedirect'
 
 describe('appUrl', () => {
   it('usa NEXT_PUBLIC_APP_URL sin barra final', () => {
@@ -39,5 +39,23 @@ describe('parseRecoveryLink', () => {
   })
   it('sin parámetros', () => {
     expect(parseRecoveryLink('', '')).toEqual({ kind: 'none' })
+  })
+})
+
+describe('parseEmailLink — invitación', () => {
+  const HASH = '0123456789abcdef0123456789abcdef0123456789abcdef01234567'
+  it('acepta solo type=invite en la página de invitación', () => {
+    expect(parseEmailLink('invite', `?token_hash=${HASH}&type=invite`)).toEqual({ kind: 'token_hash', tokenHash: HASH })
+    expect(parseEmailLink('invite', `?token_hash=${HASH}&type=recovery`)).toEqual({ kind: 'error', code: 'wrong_type' })
+    expect(parseEmailLink('invite', `?token_hash=${HASH}&type=magiclink`)).toEqual({ kind: 'error', code: 'wrong_type' })
+  })
+  it('y la de recuperación no acepta invitaciones', () => {
+    expect(parseRecoveryLink(`?token_hash=${HASH}&type=invite`)).toEqual({ kind: 'error', code: 'wrong_type' })
+  })
+  it('un enlace antiguo con el token en el hash se trata como inválido', () => {
+    expect(parseEmailLink('invite', '', '#access_token=abc&type=invite')).toEqual({ kind: 'none' })
+  })
+  it('INVITE_PATH es /bienvenida', () => {
+    expect(INVITE_PATH).toBe('/bienvenida')
   })
 })
