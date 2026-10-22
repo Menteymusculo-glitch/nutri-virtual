@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerUser, isAdmin, supabaseAdmin } from '@/lib/auth-server'
+import { supabaseAdmin } from '@/lib/auth-server'
+import { requireAdmin } from '@/lib/adminAuth'
 
 export async function GET() {
-  const user = await getServerUser()
-  if (!user || !await isAdmin(user.id)) {
-    return NextResponse.json({ error: 'No autorizado.' }, { status: 401 })
-  }
+  const auth = await requireAdmin()
+  if (!auth.ok) return auth.response
+  const user = auth.user
 
   const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 })
   if (error) return NextResponse.json({ error: 'Error al obtener usuarios.' }, { status: 500 })
@@ -35,10 +35,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getServerUser()
-  if (!user || !await isAdmin(user.id)) {
-    return NextResponse.json({ error: 'No autorizado.' }, { status: 401 })
-  }
+  const auth = await requireAdmin()
+  if (!auth.ok) return auth.response
 
   const { email, password, name, plan } = await req.json()
   if (!email || !password) {
@@ -71,10 +69,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const user = await getServerUser()
-  if (!user || !await isAdmin(user.id)) {
-    return NextResponse.json({ error: 'No autorizado.' }, { status: 401 })
-  }
+  const auth = await requireAdmin()
+  if (!auth.ok) return auth.response
 
   const { userId } = await req.json()
   if (!userId) return NextResponse.json({ error: 'userId requerido.' }, { status: 400 })

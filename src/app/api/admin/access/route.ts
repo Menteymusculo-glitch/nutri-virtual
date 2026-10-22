@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerUser, isAdmin, supabaseAdmin } from '@/lib/auth-server'
+import { supabaseAdmin } from '@/lib/auth-server'
+import { requireAdmin } from '@/lib/adminAuth'
 
 export async function PATCH(req: NextRequest) {
-  const user = await getServerUser()
-  if (!user || !await isAdmin(user.id)) {
-    return NextResponse.json({ error: 'No autorizado.' }, { status: 401 })
-  }
+  const auth = await requireAdmin()
+  if (!auth.ok) return auth.response
+  const user = auth.user
 
   const { userId, email, status, role, plan } = await req.json()
   if (!userId) {
