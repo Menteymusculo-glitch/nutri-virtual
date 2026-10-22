@@ -10,7 +10,7 @@ export function dashboardAccessMessage(status: number): { title: string; body: s
   if (status === 403) {
     return {
       title: 'Panel solo para administradores',
-      body: 'Tu cuenta no tiene permisos para ver los datos de clientes. Si crees que es un error, escribe a ray@menteymusculo.com.',
+      body: 'Tu cuenta no tiene permisos para ver los datos de clientes. Si crees que es un error, escribe a soporte@menteymusculo.com.',
     }
   }
   return null

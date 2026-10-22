@@ -138,7 +138,7 @@ export default function PrivacidadPage() {
       </ul>
       <p>
         Para ejercer cualquiera de estos derechos escribe a{' '}
-        <a href="mailto:ray@menteymusculo.com" style={{ color: '#E05C1C' }}>ray@menteymusculo.com</a>{' '}
+        <a href="mailto:soporte@menteymusculo.com" style={{ color: '#E05C1C' }}>soporte@menteymusculo.com</a>{' '}
         con el asunto «Privacidad — [tu nombre]». Responderemos en un plazo máximo de 30 días.
       </p>
 
@@ -163,7 +163,7 @@ export default function PrivacidadPage() {
       <div style={{ marginTop: 56, paddingTop: 24, borderTop: '1px solid #e2e8f0', textAlign: 'center' }}>
         <p style={{ fontSize: 13, color: '#a0aec0' }}>
           © {new Date().getFullYear()} Mente y Músculo · Ray Viloria ·{' '}
-          <a href="mailto:ray@menteymusculo.com" style={{ color: '#a0aec0' }}>ray@menteymusculo.com</a>
+          <a href="mailto:soporte@menteymusculo.com" style={{ color: '#a0aec0' }}>soporte@menteymusculo.com</a>
         </p>
       </div>
     </main>

@@ -43,7 +43,7 @@ export default function AdminPage() {
   const fetchUsers = async () => {
     const res = await fetch('/api/admin/users')
     if (res.status === 401) { router.push('/login'); return }
-    if (res.status === 403) { setError('Tu cuenta no tiene permisos de administrador. Si crees que es un error, escribe a ray@menteymusculo.com.'); return }
+    if (res.status === 403) { setError('Tu cuenta no tiene permisos de administrador. Si crees que es un error, escribe a soporte@menteymusculo.com.'); return }
     if (!res.ok) { setError('Error al cargar alumnos.'); return }
     setUsers(await res.json())
   }
