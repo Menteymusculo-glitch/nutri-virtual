@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { dashboardAccessMessage } from '@/lib/dashboardAccess'
 
 interface Client {
   id: string
@@ -44,14 +45,21 @@ export default function Dashboard() {
   const [checkins, setCheckins] = useState<CheckIn[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [denied, setDenied] = useState<{ title: string; body: string; status: number } | null>(null)
   const [selectedClient, setSelectedClient] = useState<string | null>(null)
   const [tab, setTab] = useState<'clients' | 'checkins'>('clients')
 
   useEffect(() => {
     fetch('/api/dashboard-data')
-      .then(r => r.json())
-      .then(data => {
-        if (data.error) setError(data.error)
+      .then(async r => {
+        const msg = dashboardAccessMessage(r.status)
+        if (msg) {
+          // Sin datos: nunca rellenamos clients/checkins si el acceso fue denegado.
+          setDenied({ ...msg, status: r.status })
+          return
+        }
+        const data = await r.json()
+        if (!r.ok || data.error) setError(data.error ?? 'Error cargando datos')
         else {
           setClients(data.clients || [])
           setCheckins(data.checkins || [])
@@ -86,6 +94,20 @@ export default function Dashboard() {
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', color: '#888' }}>
       Cargando dashboard...
+    </div>
+  )
+
+  if (denied) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#F5F5F5', padding: '1rem' }}>
+      <div style={{ background: 'white', borderRadius: 16, padding: '2rem', maxWidth: 440, textAlign: 'center', boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }}>
+        <h1 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '0.75rem', color: '#2d3748' }}>{denied.title}</h1>
+        <p style={{ color: '#555', fontSize: '0.95rem', lineHeight: 1.6, marginBottom: '1.25rem' }}>{denied.body}</p>
+        {denied.status === 401 && (
+          <a href="/login" style={{ display: 'inline-block', padding: '0.6rem 1.5rem', borderRadius: 8, background: 'linear-gradient(135deg, #F5A623, #B8241A)', color: 'white', fontWeight: 700, textDecoration: 'none' }}>
+            Iniciar sesión
+          </a>
+        )}
+      </div>
     </div>
   )
 
