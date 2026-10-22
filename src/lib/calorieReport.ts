@@ -6,11 +6,14 @@ import {
   MAX_WEEKLY_ADJUSTMENT_PCT,
   MIN_LOGGED_DAYS_FOR_ADJUSTMENT,
   ON_TARGET_TOLERANCE_PCT,
+  WEEK_WINDOW_DAYS,
   ZONE_TOLERANCE_PCT,
   type Sex,
 } from '@/lib/nutritionConstants'
 
-export type DayStatus = 'en_zona' | 'por_debajo' | 'por_encima' | 'sin_registros' | 'sin_objetivo'
+// 'en_curso': día abierto con registros. Los estados en_zona / por_debajo / por_encima
+// solo existen cuando el día está cerrado (lo cerró la usuaria o ya pasó).
+export type DayStatus = 'en_zona' | 'por_debajo' | 'por_encima' | 'en_curso' | 'sin_registros' | 'sin_objetivo'
 export type BalanceKind = 'deficit' | 'mantenimiento' | 'superavit'
 
 export interface EnergyBalance {
@@ -26,6 +29,8 @@ export interface DayReport {
   deviationPct: number | null // entero con signo; null sin objetivo
   onTarget: boolean // dentro de ±1%
   balance: EnergyBalance | null
+  closed: boolean
+  progressPct: number | null // % del objetivo consumido (para la barra de progreso)
 }
 
 // Evita que errores de coma flotante saquen de la zona un ±10% exacto.
@@ -49,17 +54,30 @@ function statusFor(rawPct: number): 'en_zona' | 'por_debajo' | 'por_encima' {
   return rawPct < 0 ? 'por_debajo' : 'por_encima'
 }
 
-export function dayReport(p: { consumed: number; target: number | null | undefined; tdee: number | null | undefined }): DayReport {
+export function dayReport(p: {
+  consumed: number
+  target: number | null | undefined
+  tdee: number | null | undefined
+  closed: boolean
+}): DayReport {
   const consumed = isFinite(p.consumed) && p.consumed > 0 ? Math.round(p.consumed) : 0
+  const closed = p.closed
+  const empty = { deviationPct: null, onTarget: false, balance: null, closed }
 
   if (!isPositive(p.target)) {
-    return { status: 'sin_objetivo', consumed, target: null, deviationPct: null, onTarget: false, balance: null }
+    return { status: 'sin_objetivo', consumed, target: null, progressPct: null, ...empty }
   }
   const target = Math.round(p.target)
+  const progressPct = Math.round((consumed / target) * 100)
 
   // Sin registros no hay "por debajo": simplemente aún no hay datos.
   if (consumed === 0) {
-    return { status: 'sin_registros', consumed, target, deviationPct: null, onTarget: false, balance: null }
+    return { status: 'sin_registros', consumed, target, progressPct, ...empty }
+  }
+
+  // Día abierto: solo progreso. Nada de "por debajo" a media mañana.
+  if (!closed) {
+    return { status: 'en_curso', consumed, target, progressPct, ...empty }
   }
 
   const rawPct = ((consumed - target) / target) * 100
@@ -70,7 +88,22 @@ export function dayReport(p: { consumed: number; target: number | null | undefin
     deviationPct: Math.round(rawPct),
     onTarget: Math.abs(rawPct) <= ON_TARGET_TOLERANCE_PCT + EPS,
     balance: energyBalance(consumed, p.tdee),
+    closed,
+    progressPct,
   }
+}
+
+// Un día está cerrado si es anterior a hoy (fecha local) o si la usuaria lo cerró.
+export function isDayClosed(date: string, today: string, closedDates: Iterable<string> = []): boolean {
+  if (date < today) return true
+  for (const d of closedDates) if (d === date) return true
+  return false
+}
+
+// Ventana del ajuste semanal: los últimos 7 días COMPLETOS. Si hoy está abierto,
+// la ventana termina ayer; si la usuaria cerró hoy, termina hoy.
+export function weekWindow(today: string, todayClosed: boolean, n = WEEK_WINDOW_DAYS): string[] {
+  return lastNDates(todayClosed ? today : shiftDate(today, -1), n)
 }
 
 export interface DayTotal {
@@ -96,13 +129,18 @@ export type WeekAdjustment =
 // Se calcula sobre el PROMEDIO de los días con registro de la ventana (no sobre un día suelto).
 // Los días sin registro no cuentan como 0 kcal: son datos que faltan.
 // La sugerencia es un nuevo promedio diario; nunca "compensar" un día con el siguiente.
+// Con `today`, el día actual (y cualquier fecha futura) solo cuenta si está en `closedDates`.
 export function weekAdjustment(p: {
   days: DayTotal[]
   target: number | null | undefined
   tdee: number | null | undefined
   sex: Sex | null | undefined
+  today?: string
+  closedDates?: Iterable<string>
 }): WeekAdjustment {
-  const logged = p.days.filter((d) => isFinite(d.consumed) && d.consumed > 0)
+  const closedDates = [...(p.closedDates ?? [])]
+  const eligible = p.today ? p.days.filter((d) => isDayClosed(d.date, p.today!, closedDates)) : p.days
+  const logged = eligible.filter((d) => isFinite(d.consumed) && d.consumed > 0)
   const loggedDays = logged.length
 
   if (!isPositive(p.target)) return { kind: 'sin_objetivo', loggedDays }
@@ -160,6 +198,18 @@ export function weekAdjustment(p: {
     limitedByFloor: suggestedDaily > suggested,
     balance,
   }
+}
+
+export function shiftDate(date: string, days: number): string {
+  const [y, m, d] = date.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, d) + days * 86_400_000).toISOString().slice(0, 10)
+}
+
+// La fecha local que envía el navegador solo puede diferir un día de la fecha UTC del servidor.
+export function isPlausibleToday(today: string, nowMs = Date.now()): boolean {
+  if (!isValidDate(today)) return false
+  const utc = new Date(nowMs).toISOString().slice(0, 10)
+  return today === utc || today === shiftDate(utc, -1) || today === shiftDate(utc, 1)
 }
 
 // Últimos N días (incluido `endDate`) en formato YYYY-MM-DD, del más antiguo al más reciente.

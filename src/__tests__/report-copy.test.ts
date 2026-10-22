@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { COPY, FORBIDDEN_TERMS, dayCopy, weekCopy, deviationPhrase, balancePhrase } from '@/lib/reportCopy'
+import { COPY, FORBIDDEN_TERMS, dayCopy, weekCopy, deviationPhrase, balancePhrase, progressPhrase } from '@/lib/reportCopy'
 import { dayReport, weekAdjustment, type DayTotal } from '@/lib/calorieReport'
+
+// Los casos de estado (en_zona / por_debajo / por_encima) son de días cerrados.
+const closedDay = (p: Omit<Parameters<typeof dayReport>[0], 'closed'>) => dayReport({ ...p, closed: true })
 
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 
@@ -18,8 +21,10 @@ function collectStrings(v: unknown, out: string[] = []): string[] {
 
 // Escenarios que cubren todas las ramas de dayCopy y weekCopy.
 const dayScenarios = [0, 900, 1500, 1800, 1990, 2000, 2080, 2200, 2500, 4000].flatMap((consumed) => [
-  dayReport({ consumed, target: 2000, tdee: 2300 }),
-  dayReport({ consumed, target: null, tdee: null }),
+  closedDay({ consumed, target: 2000, tdee: 2300 }),
+  closedDay({ consumed, target: null, tdee: null }),
+  dayReport({ consumed, target: 2000, tdee: 2300, closed: false }),
+  dayReport({ consumed, target: null, tdee: null, closed: false }),
 ])
 
 const wk = (vals: number[]): DayTotal[] => vals.map((consumed, i) => ({ date: `2026-10-1${i}`, consumed }))
@@ -61,16 +66,16 @@ describe('reportCopy — lenguaje sin culpa', () => {
 
 describe('reportCopy — contenido', () => {
   it('"justo en tu objetivo" dentro de ±1%', () => {
-    expect(deviationPhrase(dayReport({ consumed: 2010, target: 2000, tdee: 2300 }))).toBe('Estás justo en tu objetivo')
+    expect(deviationPhrase(closedDay({ consumed: 2010, target: 2000, tdee: 2300 }))).toBe('Estás justo en tu objetivo')
   })
 
   it('porcentaje con dirección', () => {
-    expect(deviationPhrase(dayReport({ consumed: 2080, target: 2000, tdee: 2300 }))).toBe('Estás un 4% por encima de tu objetivo')
-    expect(deviationPhrase(dayReport({ consumed: 1500, target: 2000, tdee: 2300 }))).toBe('Estás un 25% por debajo de tu objetivo')
+    expect(deviationPhrase(closedDay({ consumed: 2080, target: 2000, tdee: 2300 }))).toBe('Estás un 4% por encima de tu objetivo')
+    expect(deviationPhrase(closedDay({ consumed: 1500, target: 2000, tdee: 2300 }))).toBe('Estás un 25% por debajo de tu objetivo')
   })
 
   it('el estado en zona dice "En tu zona" y muestra consumidas y objetivo', () => {
-    const c = dayCopy(dayReport({ consumed: 2080, target: 2000, tdee: 2300 }))
+    const c = dayCopy(closedDay({ consumed: 2080, target: 2000, tdee: 2300 }))
     expect(c.label).toBe('En tu zona')
     expect(c.numbers).toMatch(/2080 kcal de 2000 kcal|2\.080 kcal de 2\.000 kcal/)
   })
@@ -96,5 +101,31 @@ describe('reportCopy — contenido', () => {
       const t = norm(weekCopy(w).detail.join(' '))
       expect(t).not.toMatch(/manana (come|comer|reduce|reducir)/)
     }
+  })
+})
+
+describe('reportCopy — día en curso', () => {
+  const open = (consumed: number) => dayReport({ consumed, target: 1800, tdee: 2100, closed: false })
+
+  it('muestra progreso "Llevas X de Y kcal" y no "por debajo"', () => {
+    const c = dayCopy(open(650))
+    expect(c.label).toBe('Tu día en curso')
+    expect(c.numbers).toMatch(/^Llevas 650 de 1\.?800 kcal$/)
+    expect(c.deviation).toBeNull()
+    expect(c.balance).toBeNull()
+    const all = collectStrings(c).join(' ').toLowerCase()
+    expect(all).not.toMatch(/por debajo|por encima|en tu zona|déficit|superávit/)
+  })
+
+  it('invita a cerrar el día', () => {
+    expect(dayCopy(open(650)).encouragement).toMatch(/ciérralo/i)
+  })
+
+  it('modo ocultar calorías: sin números también con el día abierto', () => {
+    expect(collectStrings(dayCopy(open(650), { hideCalories: true })).join(' ')).not.toMatch(/\d/)
+  })
+
+  it('progressPhrase sin objetivo', () => {
+    expect(progressPhrase({ consumed: 500, target: null })).toBe('Llevas 500 kcal')
   })
 })

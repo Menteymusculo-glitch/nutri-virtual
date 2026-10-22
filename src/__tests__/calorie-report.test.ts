@@ -1,67 +1,73 @@
 import { describe, it, expect } from 'vitest'
-import { dayReport, weekAdjustment, energyBalance, lastNDates, isValidDate, type DayTotal } from '@/lib/calorieReport'
+import {
+  dayReport, weekAdjustment, energyBalance, lastNDates, isValidDate, isDayClosed, weekWindow, shiftDate,
+  isPlausibleToday, type DayTotal,
+} from '@/lib/calorieReport'
 import { KCAL_FLOOR_FEMALE, KCAL_FLOOR_MALE } from '@/lib/nutritionConstants'
+
+// Los casos de estado (en_zona / por_debajo / por_encima) son de días cerrados.
+const closedDay = (p: Omit<Parameters<typeof dayReport>[0], 'closed'>) => dayReport({ ...p, closed: true })
 
 describe('dayReport — estado', () => {
   const base = { target: 2000, tdee: 2300 }
 
   it('0 kcal → sin_registros (no "por debajo")', () => {
-    const r = dayReport({ ...base, consumed: 0 })
+    const r = closedDay({ ...base, consumed: 0 })
     expect(r.status).toBe('sin_registros')
     expect(r.deviationPct).toBeNull()
     expect(r.balance).toBeNull()
   })
 
   it('sin objetivo → sin_objetivo', () => {
-    expect(dayReport({ consumed: 1500, target: null, tdee: 2000 }).status).toBe('sin_objetivo')
-    expect(dayReport({ consumed: 1500, target: 0, tdee: 2000 }).status).toBe('sin_objetivo')
-    expect(dayReport({ consumed: 1500, target: undefined, tdee: 2000 }).status).toBe('sin_objetivo')
+    expect(closedDay({ consumed: 1500, target: null, tdee: 2000 }).status).toBe('sin_objetivo')
+    expect(closedDay({ consumed: 1500, target: 0, tdee: 2000 }).status).toBe('sin_objetivo')
+    expect(closedDay({ consumed: 1500, target: undefined, tdee: 2000 }).status).toBe('sin_objetivo')
   })
 
   it('justo +10% → en_zona', () => {
-    const r = dayReport({ ...base, consumed: 2200 })
+    const r = closedDay({ ...base, consumed: 2200 })
     expect(r.status).toBe('en_zona')
     expect(r.deviationPct).toBe(10)
   })
 
   it('justo −10% → en_zona', () => {
-    const r = dayReport({ ...base, consumed: 1800 })
+    const r = closedDay({ ...base, consumed: 1800 })
     expect(r.status).toBe('en_zona')
     expect(r.deviationPct).toBe(-10)
   })
 
   it('+10.05% → por_encima', () => {
-    expect(dayReport({ ...base, consumed: 2201 }).status).toBe('por_encima')
+    expect(closedDay({ ...base, consumed: 2201 }).status).toBe('por_encima')
   })
 
   it('−10.05% → por_debajo', () => {
-    expect(dayReport({ ...base, consumed: 1799 }).status).toBe('por_debajo')
+    expect(closedDay({ ...base, consumed: 1799 }).status).toBe('por_debajo')
   })
 
   it('±10% exacto con objetivos que generan coma flotante', () => {
-    expect(dayReport({ consumed: 1870, target: 1700, tdee: 2000 }).status).toBe('en_zona') // +10%
-    expect(dayReport({ consumed: 1530, target: 1700, tdee: 2000 }).status).toBe('en_zona') // −10%
+    expect(closedDay({ consumed: 1870, target: 1700, tdee: 2000 }).status).toBe('en_zona') // +10%
+    expect(closedDay({ consumed: 1530, target: 1700, tdee: 2000 }).status).toBe('en_zona') // −10%
   })
 
   it('dentro de ±1% → onTarget', () => {
-    expect(dayReport({ ...base, consumed: 2020 }).onTarget).toBe(true) // +1%
-    expect(dayReport({ ...base, consumed: 1980 }).onTarget).toBe(true) // −1%
-    expect(dayReport({ ...base, consumed: 2000 }).onTarget).toBe(true)
+    expect(closedDay({ ...base, consumed: 2020 }).onTarget).toBe(true) // +1%
+    expect(closedDay({ ...base, consumed: 1980 }).onTarget).toBe(true) // −1%
+    expect(closedDay({ ...base, consumed: 2000 }).onTarget).toBe(true)
   })
 
   it('fuera de ±1% → no onTarget', () => {
-    expect(dayReport({ ...base, consumed: 2021 }).onTarget).toBe(false)
-    expect(dayReport({ ...base, consumed: 1979 }).onTarget).toBe(false)
+    expect(closedDay({ ...base, consumed: 2021 }).onTarget).toBe(false)
+    expect(closedDay({ ...base, consumed: 1979 }).onTarget).toBe(false)
   })
 
   it('desviación redondeada con signo', () => {
-    expect(dayReport({ ...base, consumed: 2080 }).deviationPct).toBe(4)
-    expect(dayReport({ ...base, consumed: 1500 }).deviationPct).toBe(-25)
+    expect(closedDay({ ...base, consumed: 2080 }).deviationPct).toBe(4)
+    expect(closedDay({ ...base, consumed: 1500 }).deviationPct).toBe(-25)
   })
 
   it('kcal negativas o NaN se tratan como 0', () => {
-    expect(dayReport({ ...base, consumed: -50 }).status).toBe('sin_registros')
-    expect(dayReport({ ...base, consumed: NaN }).status).toBe('sin_registros')
+    expect(closedDay({ ...base, consumed: -50 }).status).toBe('sin_registros')
+    expect(closedDay({ ...base, consumed: NaN }).status).toBe('sin_registros')
   })
 })
 
@@ -81,7 +87,7 @@ describe('energyBalance (déficit / mantenimiento / superávit vs TDEE)', () => 
     expect(energyBalance(2000, 0)).toBeNull()
   })
   it('dayReport incluye el balance', () => {
-    expect(dayReport({ consumed: 1700, target: 1700, tdee: 2000 }).balance?.kind).toBe('deficit')
+    expect(closedDay({ consumed: 1700, target: 1700, tdee: 2000 }).balance?.kind).toBe('deficit')
   })
 })
 
@@ -193,5 +199,134 @@ describe('fechas', () => {
     expect(isValidDate('2026-02-30')).toBe(false)
     expect(isValidDate('22-10-2026')).toBe(false)
     expect(isValidDate(undefined)).toBe(false)
+  })
+})
+
+describe('día en curso (abierto)', () => {
+  const base = { target: 2000, tdee: 2300, closed: false }
+
+  it('desayuno de 300 kcal a media mañana → en_curso, no por_debajo', () => {
+    const r = dayReport({ ...base, consumed: 300 })
+    expect(r.status).toBe('en_curso')
+    expect(r.deviationPct).toBeNull()
+    expect(r.balance).toBeNull()
+    expect(r.onTarget).toBe(false)
+    expect(r.progressPct).toBe(15)
+    expect(r.closed).toBe(false)
+  })
+
+  it('abierto y ya por encima del objetivo → sigue en_curso (sin juicio)', () => {
+    const r = dayReport({ ...base, consumed: 2600 })
+    expect(r.status).toBe('en_curso')
+    expect(r.progressPct).toBe(130)
+  })
+
+  it('abierto sin registros → sin_registros', () => {
+    expect(dayReport({ ...base, consumed: 0 }).status).toBe('sin_registros')
+  })
+
+  it('abierto sin objetivo → sin_objetivo', () => {
+    expect(dayReport({ ...base, target: null, consumed: 500 }).status).toBe('sin_objetivo')
+  })
+
+  it('el mismo consumo con el día cerrado sí da estado', () => {
+    expect(dayReport({ ...base, consumed: 300, closed: true }).status).toBe('por_debajo')
+    expect(dayReport({ ...base, consumed: 2000, closed: true }).status).toBe('en_zona')
+    expect(dayReport({ ...base, consumed: 2600, closed: true }).status).toBe('por_encima')
+  })
+})
+
+describe('isDayClosed', () => {
+  const today = '2026-10-22'
+  it('los días anteriores a hoy están cerrados aunque no tengan fila', () => {
+    expect(isDayClosed('2026-10-21', today)).toBe(true)
+    expect(isDayClosed('2025-12-31', today)).toBe(true)
+  })
+  it('hoy está abierto salvo que la usuaria lo cierre', () => {
+    expect(isDayClosed(today, today)).toBe(false)
+    expect(isDayClosed(today, today, ['2026-10-22'])).toBe(true)
+  })
+  it('un día futuro nunca está cerrado por fecha', () => {
+    expect(isDayClosed('2026-10-23', today)).toBe(false)
+  })
+})
+
+describe('weekWindow', () => {
+  it('hoy abierto → 7 días terminando ayer', () => {
+    const w = weekWindow('2026-10-22', false)
+    expect(w).toHaveLength(7)
+    expect(w[0]).toBe('2026-10-15')
+    expect(w[6]).toBe('2026-10-21')
+  })
+  it('hoy cerrado → 7 días terminando hoy', () => {
+    const w = weekWindow('2026-10-22', true)
+    expect(w[0]).toBe('2026-10-16')
+    expect(w[6]).toBe('2026-10-22')
+  })
+})
+
+describe('weekAdjustment con el día en curso', () => {
+  const base = { target: 2000, tdee: 2300, sex: 'female' as const, today: '2026-10-22' }
+  const days = (vals: [string, number][]) => vals.map(([date, consumed]) => ({ date, consumed }))
+
+  it('excluye hoy (abierto) del promedio: un desayuno no dispara "subir"', () => {
+    const w = weekAdjustment({
+      ...base,
+      days: days([['2026-10-19', 2000], ['2026-10-20', 2000], ['2026-10-21', 2000], ['2026-10-22', 300]]),
+    })
+    if (w.kind !== 'mantener') throw new Error(w.kind)
+    expect(w.average).toBe(2000)
+    expect(w.loggedDays).toBe(3)
+  })
+
+  it('excluye hoy (abierto) del conteo de días con registro', () => {
+    const w = weekAdjustment({
+      ...base,
+      days: days([['2026-10-20', 2000], ['2026-10-21', 2000], ['2026-10-22', 1800]]),
+    })
+    expect(w).toEqual({ kind: 'pocos_datos', loggedDays: 2, needed: 3 })
+  })
+
+  it('incluye hoy si la usuaria lo cerró', () => {
+    const w = weekAdjustment({
+      ...base,
+      closedDates: ['2026-10-22'],
+      days: days([['2026-10-20', 2000], ['2026-10-21', 2000], ['2026-10-22', 1700]]),
+    })
+    if (w.kind !== 'mantener') throw new Error(w.kind)
+    expect(w.loggedDays).toBe(3)
+    expect(w.average).toBe(1900)
+  })
+
+  it('cerrar otro día no hace contar hoy', () => {
+    const w = weekAdjustment({
+      ...base,
+      closedDates: ['2026-10-21'],
+      days: days([['2026-10-20', 2000], ['2026-10-21', 2000], ['2026-10-22', 1700]]),
+    })
+    expect(w.kind).toBe('pocos_datos')
+  })
+
+  it('sin `today` cuenta todos los días (compatibilidad)', () => {
+    const w = weekAdjustment({
+      target: 2000, tdee: 2300, sex: 'female',
+      days: days([['2026-10-20', 2000], ['2026-10-21', 2000], ['2026-10-22', 2000]]),
+    })
+    expect(w.kind).toBe('mantener')
+  })
+})
+
+describe('shiftDate e isPlausibleToday', () => {
+  it('shiftDate cruza meses y años', () => {
+    expect(shiftDate('2026-03-01', -1)).toBe('2026-02-28')
+    expect(shiftDate('2026-12-31', 1)).toBe('2027-01-01')
+  })
+  it('acepta la fecha local si difiere ±1 día de la UTC', () => {
+    const now = Date.UTC(2026, 9, 22, 12)
+    expect(isPlausibleToday('2026-10-22', now)).toBe(true)
+    expect(isPlausibleToday('2026-10-21', now)).toBe(true)
+    expect(isPlausibleToday('2026-10-23', now)).toBe(true)
+    expect(isPlausibleToday('2026-10-25', now)).toBe(false)
+    expect(isPlausibleToday('basura', now)).toBe(false)
   })
 })

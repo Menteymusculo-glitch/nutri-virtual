@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server'
 import type { User } from '@supabase/supabase-js'
 import { getServerUser, hasTrackerAccess, supabaseAdmin } from '@/lib/auth-server'
+import { isPlausibleToday } from '@/lib/calorieReport'
 
 export type TrackerAuth = { ok: true; user: User } | { ok: false; response: NextResponse }
 
@@ -43,4 +44,21 @@ export async function loadTarget(userId: string): Promise<{ data: TargetRow | nu
     .eq('user_id', userId)
     .maybeSingle()
   return { data: (data as TargetRow | null) ?? null, error }
+}
+
+// Fecha local de la usuaria (?today=AAAA-MM-DD). Si falta o no es plausible
+// (más de un día de diferencia con la fecha UTC), se usa la fecha UTC.
+export function resolveToday(param: string | null): string {
+  return param && isPlausibleToday(param) ? param : todayUtc()
+}
+
+// Fechas (de la lista) que la usuaria cerró explícitamente.
+export async function loadClosedDates(userId: string, dates: string[]): Promise<{ data: string[]; error: { message: string } | null }> {
+  if (dates.length === 0) return { data: [], error: null }
+  const { data, error } = await supabaseAdmin
+    .from('day_closures')
+    .select('log_date')
+    .eq('user_id', userId)
+    .in('log_date', dates)
+  return { data: (data ?? []).map((r) => String(r.log_date)), error }
 }

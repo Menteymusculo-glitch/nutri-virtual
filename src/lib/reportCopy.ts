@@ -22,6 +22,9 @@ export const COPY = {
   supportLink: '¿Necesitas apoyo? Habla con Ray',
   guideNote: 'Las cifras son una guía para ver tu tendencia, no una medida exacta.',
   addMeal: 'Añadir comida',
+  closeDay: 'Cerrar mi día',
+  closeDayHint: 'Ciérralo cuando hayas registrado tu última comida para ver tu resumen del día.',
+  dayClosed: 'Día cerrado. ¡Gracias por registrar!',
   deleteMeal: 'Quitar',
   confirmDelete: '¿Quitar esta comida del registro?',
   noMeals: 'Aún no hay comidas registradas hoy. Te invito a añadir la primera: cada registro es una victoria.',
@@ -63,6 +66,7 @@ const STATUS_LABEL: Record<DayReport['status'], string> = {
   en_zona: 'En tu zona',
   por_debajo: 'Por debajo de tu objetivo',
   por_encima: 'Por encima de tu objetivo',
+  en_curso: 'Tu día en curso',
   sin_registros: 'Tu día empieza aquí',
   sin_objetivo: 'Define tu objetivo',
 }
@@ -91,13 +95,20 @@ const STATUS_ENCOURAGEMENT: Record<DayReport['status'], string> = {
   en_zona: 'Lo estás haciendo muy bien.',
   por_debajo: 'Recuerda nutrirte bien: tu cuerpo necesita energía para rendir y recuperarse.',
   por_encima: 'Es información, no un juicio. Lo que cuenta es la tendencia de la semana.',
+  en_curso: 'Cada registro es una victoria. Cuando termines tu día, ciérralo para ver tu resumen.',
   sin_registros: 'Te invito a registrar tu primera comida. Cada registro es una victoria.',
   sin_objetivo: 'Te invito a definir tu objetivo en Ajustes para ver tu reporte.',
 }
 
+// "Llevas 650 de 1.800 kcal"
+export function progressPhrase(r: Pick<DayReport, 'consumed' | 'target'>): string {
+  const n = (x: number) => Math.round(x).toLocaleString('es-ES')
+  return r.target ? `Llevas ${n(r.consumed)} de ${n(r.target)} kcal` : `Llevas ${n(r.consumed)} kcal`
+}
+
 export interface DayCopy {
   label: string
-  numbers: string | null // "1.650 kcal de 1.800 kcal"
+  numbers: string | null // "1.650 kcal de 1.800 kcal" o, con el día abierto, "Llevas 650 de 1.800 kcal"
   deviation: string | null
   balance: string | null
   encouragement: string
@@ -109,6 +120,10 @@ export function dayCopy(r: DayReport, opts: { hideCalories?: boolean } = {}): Da
   if (opts.hideCalories) {
     // Solo estado y ánimo; ningún número.
     return { label, numbers: null, deviation: null, balance: null, encouragement }
+  }
+  if (r.status === 'en_curso') {
+    // Día abierto: solo progreso, sin desviación ni balance.
+    return { label, numbers: progressPhrase(r), deviation: null, balance: null, encouragement }
   }
   return {
     label,
@@ -129,11 +144,12 @@ export function weekCopy(w: WeekAdjustment, opts: { hideCalories?: boolean } = {
     return { headline: 'Define tu objetivo', detail: ['Te invito a definir tu objetivo en Ajustes para ver tu semana.'] }
   }
   if (w.kind === 'pocos_datos') {
-    const dias = w.loggedDays === 1 ? '1 día' : `${w.loggedDays} días`
+    const dias = w.loggedDays === 1 ? '1 día completo' : `${w.loggedDays} días completos`
     return {
       headline: 'Sigamos sumando registros',
       detail: [
         `Llevas ${dias} con registro en los últimos 7. Con al menos ${w.needed} podremos sugerirte un ajuste fiable.`,
+        'El día de hoy cuenta cuando lo cierras.',
         'Te invito a seguir registrando: cada registro es una victoria.',
       ],
     }
@@ -141,7 +157,7 @@ export function weekCopy(w: WeekAdjustment, opts: { hideCalories?: boolean } = {
 
   const hide = !!opts.hideCalories
   const avg = hide ? null : `Tu promedio de los últimos 7 días es ${fmtKcal(w.average)} (objetivo: ${fmtKcal(w.target)}).`
-  const days = `Basado en ${w.loggedDays} días con registro.`
+  const days = `Basado en ${w.loggedDays} días completos con registro.`
   const balance = hide ? null : balancePhrase(w.balance, 'Tu promedio')
   const noRebound = 'Es un ajuste suave del promedio diario, no hace falta comer menos al día siguiente de un día con más.'
   const floorNote = 'Por tu bienestar, no sugerimos bajar del mínimo diario recomendado.'

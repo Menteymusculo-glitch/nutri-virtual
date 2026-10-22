@@ -16,7 +16,7 @@ interface Target {
 }
 interface MealItem { id: string; name: string; grams: number; kcal: number }
 interface Meal { id: string; meal_type: string | null; total_kcal: number; meal_items: MealItem[] }
-interface DayData { date: string; target: Target | null; meals: Meal[]; report: DayReport }
+interface DayData { date: string; today: string; closed: boolean; target: Target | null; meals: Meal[]; report: DayReport }
 interface WeekData { days: DayTotal[]; adjustment: WeekAdjustment }
 interface Food { id: string; name: string; kcal_100g: number; protein_100g: number | null; carbs_100g: number | null; fat_100g: number | null }
 interface DraftItem { food: Food; grams: string }
@@ -28,6 +28,7 @@ const STATUS_COLORS: Record<DayReport['status'], string> = {
   en_zona: '#48bb78',
   por_debajo: '#4299e1',
   por_encima: '#ed8936',
+  en_curso: '#FFA500',
   sin_registros: '#a0aec0',
   sin_objetivo: '#a0aec0',
 }
@@ -127,7 +128,7 @@ export default function TrackerPage() {
   useEffect(() => {
     if (phase !== 'ready') return
     let cancelled = false
-    api<DayData>(`/api/tracker/day?date=${date}`).then((r) => {
+    api<DayData>(`/api/tracker/day?date=${date}&today=${localDate()}`).then((r) => {
       if (cancelled) return
       if (r.ok) setDay(r.data)
       else setError(r.error)
@@ -138,7 +139,7 @@ export default function TrackerPage() {
   useEffect(() => {
     if (phase !== 'ready' || tab !== 'semana') return
     let cancelled = false
-    api<WeekData>(`/api/tracker/week?end=${localDate()}`).then((r) => {
+    api<WeekData>(`/api/tracker/week?today=${localDate()}`).then((r) => {
       if (cancelled) return
       if (r.ok) setWeek(r.data)
       else setError(r.error)
@@ -149,6 +150,16 @@ export default function TrackerPage() {
   const flash = (msg: string) => {
     setToast(msg)
     setTimeout(() => setToast(''), 3000)
+  }
+
+  const [closing, setClosing] = useState(false)
+  const closeDay = async () => {
+    setClosing(true)
+    const r = await api('/api/tracker/day/close', { method: 'POST', body: JSON.stringify({ date, today: localDate() }) })
+    setClosing(false)
+    if (!r.ok) { setError(r.error); return }
+    flash(COPY.dayClosed)
+    reloadDay()
   }
 
   const deleteMeal = async (id: string) => {
@@ -252,6 +263,19 @@ export default function TrackerPage() {
           ) : (
             <button style={btnStyle} onClick={() => setShowAdd(true)}>+ {COPY.addMeal}</button>
           )}
+
+          {day && !day.closed && day.date === day.today && day.meals.length > 0 && !showAdd && (
+            <div style={{ marginTop: 12 }}>
+              <button
+                style={{ ...btnStyle, background: 'white', color: '#DC143C', border: '2px solid #FF6347', opacity: closing ? 0.7 : 1 }}
+                disabled={closing}
+                onClick={closeDay}
+              >
+                {closing ? 'Cerrando…' : COPY.closeDay}
+              </button>
+              <p style={{ ...hintStyle, textAlign: 'center', marginTop: 6 }}>{COPY.closeDayHint}</p>
+            </div>
+          )}
         </>
       )}
 
@@ -278,6 +302,11 @@ function DayHeader({ report, hide }: { report: DayReport; hide: boolean }) {
       {c.numbers && (
         <div style={{ fontSize: 28, fontWeight: 700, background: GRADIENT, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: 4 }}>
           {c.numbers}
+        </div>
+      )}
+      {report.status === 'en_curso' && !hide && report.progressPct !== null && (
+        <div style={{ height: 8, background: '#e2e8f0', borderRadius: 4, overflow: 'hidden', margin: '6px 0 10px' }}>
+          <div style={{ width: `${Math.min(report.progressPct, 100)}%`, height: '100%', background: GRADIENT }} />
         </div>
       )}
       {c.deviation && <p style={{ ...pStyle, margin: '0 0 6px', fontWeight: 600 }}>{c.deviation}</p>}
