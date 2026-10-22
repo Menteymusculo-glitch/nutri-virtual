@@ -97,6 +97,7 @@ export default function Dashboard() {
           <div>
             <p style={{ fontSize: '0.7rem', letterSpacing: '0.15em', opacity: 0.85 }}>MASTER RAY VILORIA</p>
             <h1 style={{ fontSize: '1.3rem', fontWeight: 800 }}>NUTRI VIRTUAL · Panel del Coach</h1>
+            <a href="/tracker" style={{ fontSize: '0.8rem', color: 'white', opacity: 0.9, textDecoration: 'underline' }}>📊 Registro diario de calorías</a>
           </div>
           <div style={{ display: 'flex', gap: '1rem', fontSize: '0.9rem' }}>
             <Stat label="Clientes" value={clients.length} />

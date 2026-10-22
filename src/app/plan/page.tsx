@@ -68,6 +68,21 @@ export default function PlanPage() {
               >
                 📥 Descargar PDF
               </button>
+              <a
+                href="/tracker"
+                style={{
+                  padding: '0.5rem 1rem',
+                  borderRadius: 8,
+                  border: '2px solid rgba(255,255,255,0.6)',
+                  background: 'transparent',
+                  color: 'white',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                }}
+              >
+                📊 Registro diario
+              </a>
               <button
                 onClick={handleNewPlan}
                 style={{
