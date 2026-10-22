@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
 
   // 1. Save to Supabase (blocking — this must succeed for 200 OK)
   try {
-    await supabaseAdmin.from('leads').insert({
+    const { error: insertError } = await supabaseAdmin.from('leads').insert({
       email: normalizedEmail,
       nombre: normalizedNombre,
       telefono: normalizedTelefono,
@@ -87,6 +87,9 @@ export async function POST(req: NextRequest) {
         captured_at: new Date().toISOString(),
       },
     })
+    // supabase-js NO lanza excepción: devuelve { error }. Sin este check, un insert
+    // fallido (columna inexistente, RLS, etc.) respondía 200 y el lead se perdía en silencio.
+    if (insertError) throw insertError
   } catch (err) {
     console.error('[leads/calculadora-grasa] Supabase insert error:', err)
     return NextResponse.json({ error: 'Error al guardar. Intenta de nuevo.' }, { status: 500 })

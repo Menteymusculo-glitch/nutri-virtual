@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: createError.message }, { status: 400 })
   }
 
-  const VALID_PLANS = ['training_club', 'premium', 'gym_virtual_core', 'legacy', 'plan_equipo', 'manual']
+  const VALID_PLANS = ['training_club', 'premium', 'gym_virtual_core', 'nutri_app', 'legacy', 'plan_equipo', 'manual']
   const resolvedPlan = plan && VALID_PLANS.includes(plan) ? plan : 'training_club'
 
   await supabaseAdmin.from('access').insert({

@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabaseBrowser } from '@/lib/supabase-browser'
-
-type Gender = 'female' | 'male'
+import { computeNavyBodyFat, getCategory, healthyRange, type Gender } from '@/lib/bodyFat'
 
 interface CalcResult {
   bf: number
@@ -12,22 +11,9 @@ interface CalcResult {
   category: { name: string; cls: string }
   outOfRange: boolean
   clampedBf: number
-}
-
-function getCategory(bf: number, gender: Gender) {
-  if (gender === 'female') {
-    if (bf < 14) return { name: 'Esencial', cls: 'essential' }
-    if (bf < 21) return { name: 'Atleta', cls: 'athlete' }
-    if (bf < 25) return { name: 'Fitness', cls: 'fitness' }
-    if (bf < 32) return { name: 'Aceptable', cls: 'acceptable' }
-    return { name: 'Alto', cls: 'obesity' }
-  } else {
-    if (bf < 6) return { name: 'Esencial', cls: 'essential' }
-    if (bf < 14) return { name: 'Atleta', cls: 'athlete' }
-    if (bf < 18) return { name: 'Fitness', cls: 'fitness' }
-    if (bf < 25) return { name: 'Aceptable', cls: 'acceptable' }
-    return { name: 'Alto', cls: 'obesity' }
-  }
+  low: number
+  high: number
+  healthy: [number, number]
 }
 
 const INTERP: Record<Gender, Record<string, string>> = {
@@ -53,14 +39,14 @@ const RANGES: Record<Gender, { label: string; value: string; color: string }[]> 
     { label: 'Atleta', value: '14-20%', color: '#4299e1' },
     { label: 'Fitness', value: '21-24%', color: '#ed8936' },
     { label: 'Aceptable', value: '25-31%', color: '#ecc94b' },
-    { label: 'Alto', value: '32%+', color: '#f56565' },
+    { label: 'Por encima', value: '32%+', color: '#f56565' },
   ],
   male: [
     { label: 'Esencial', value: '2-5%', color: '#48bb78' },
     { label: 'Atleta', value: '6-13%', color: '#4299e1' },
     { label: 'Fitness', value: '14-17%', color: '#ed8936' },
     { label: 'Aceptable', value: '18-24%', color: '#ecc94b' },
-    { label: 'Alto', value: '25%+', color: '#f56565' },
+    { label: 'Por encima', value: '25%+', color: '#f56565' },
   ],
 }
 
@@ -142,26 +128,14 @@ export default function CalculadoraGrasa() {
       return
     }
 
-    let rawBf: number
-    if (g === 'female') {
-      const logVal = wa + hi - n
-      if (logVal <= 0) { setFormError('Cintura + cadera debe ser mayor que el cuello.'); return }
-      rawBf = 495 / (1.29579 - 0.35004 * Math.log10(logVal) + 0.22100 * Math.log10(h)) - 450
-    } else {
-      const logVal = wa - n
-      if (logVal <= 0) { setFormError('La cintura debe ser mayor que el cuello.'); return }
-      rawBf = 495 / (1.0324 - 0.19077 * Math.log10(logVal) + 0.15456 * Math.log10(h)) - 450
-    }
+    const calc = computeNavyBodyFat({ gender: g, heightCm: h, neckCm: n, waistCm: wa, hipCm: hi })
+    if (!calc.ok) { setFormError(calc.error); return }
 
-    if (!isFinite(rawBf)) { setFormError('Error en el cálculo. Verifica que las medidas sean correctas.'); return }
-
-    const outOfRange = rawBf < 3 || rawBf > 60
-    const clampedBf = Math.min(60, Math.max(3, rawBf))
-    const bf = outOfRange ? clampedBf : rawBf
+    const { bf, outOfRange, clampedBf, low, high } = calc
     const fatMass = w * (bf / 100)
     const leanMass = w - fatMass
     const category = getCategory(bf, g)
-    const newResult = { bf, fatMass, leanMass, category, outOfRange, clampedBf }
+    const newResult: CalcResult = { bf, fatMass, leanMass, category, outOfRange, clampedBf, low, high, healthy: healthyRange(g, a) }
     setResult(newResult)
 
     if (isLoggedIn) {
@@ -244,7 +218,7 @@ export default function CalculadoraGrasa() {
 
         <div style={{ background: 'linear-gradient(135deg,#fff5e6,#ffe8d1)', padding: 15, borderRadius: 10, marginBottom: 25, borderLeft: '4px solid #FF6347' }}>
           <h4 style={{ color: '#DC143C', fontSize: 14, marginBottom: 8, fontWeight: 700 }}>📏 Método de Medición Científico</h4>
-          <p style={{ color: '#2d3748', fontSize: 13, lineHeight: 1.5 }}>Esta calculadora usa el método de circunferencias de la Marina de EE.UU., validado científicamente con un margen de error del ±3-4%. Solo necesitas una cinta métrica.</p>
+          <p style={{ color: '#2d3748', fontSize: 13, lineHeight: 1.5 }}>Esta calculadora usa el método de circunferencias de la Marina de EE.UU. Es una estimación: el margen de error habitual es de ±3-4 puntos y puede ser mayor en algunos cuerpos. Solo necesitas una cinta métrica.</p>
         </div>
 
         <form onSubmit={calculate} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -349,6 +323,12 @@ export default function CalculadoraGrasa() {
               <span style={{ fontSize: 18, fontWeight: 600, padding: '8px 20px', borderRadius: 20, display: 'inline-block', marginBottom: 20, background: CAT_COLORS[result.category.cls], color: 'white' }}>
                 {result.category.name}
               </span>
+              <p style={{ color: '#4a5568', fontSize: 14, marginTop: 4 }}>
+                Rango estimado: <strong>{result.low.toFixed(0)}–{result.high.toFixed(0)}%</strong>
+              </p>
+              <p style={{ color: '#718096', fontSize: 13, marginTop: 6, lineHeight: 1.5 }}>
+                Para tu edad, el rango de referencia asociado a un peso saludable es {result.healthy[0]}–{result.healthy[1]}%.
+              </p>
 
               {result.outOfRange && (
                 <div style={{ background: '#fffbeb', border: '1px solid #f59e0b', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: '#92400e', textAlign: 'left' }}>

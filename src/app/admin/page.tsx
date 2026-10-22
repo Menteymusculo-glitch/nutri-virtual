@@ -38,7 +38,7 @@ export default function AdminPage() {
   // Plans with Motor de Identidad access (full tool access)
   const IDENTITY_PLANS = ['training_club', 'premium']
   // Plans with Nutri Virtual access only
-  const NUTRI_ONLY_PLANS = ['gym_virtual_core']
+  const NUTRI_ONLY_PLANS = ['gym_virtual_core', 'nutri_app']
 
   const fetchUsers = async () => {
     const res = await fetch('/api/admin/users')
@@ -269,6 +269,7 @@ export default function AdminPage() {
                     <option value="training_club">Training Club ✅</option>
                     <option value="premium">Premium ✅</option>
                     <option value="gym_virtual_core">Gym Virtual Core</option>
+                    <option value="nutri_app">App Nutri Virtual (9 €/mes)</option>
                     <option value="legacy">Legacy</option>
                     <option value="plan_equipo">Plan Equipo</option>
                     <option value="manual">Manual (sin herramientas)</option>
