@@ -5,10 +5,11 @@ export const PLAN_RANK: Record<string, number> = {
   premium:          3,
   training_club:    2,
   gym_virtual_core: 1,
+  nutri_app:        0.5, // app Nutri Virtual 9 €/mes (7 días de prueba); nunca supera a un plan de coaching
 }
 
 // Plans that unlock Nutri Virtual (includes Gym Virtual)
-export const NUTRI_PLANS = ['training_club', 'premium', 'gym_virtual_core'] as const
+export const NUTRI_PLANS = ['training_club', 'premium', 'gym_virtual_core', 'nutri_app'] as const
 // Plans that unlock Motor de Identidad (Gym Virtual excluded)
 export const IDENTITY_PLANS = ['training_club', 'premium'] as const
 

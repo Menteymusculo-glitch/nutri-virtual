@@ -96,6 +96,24 @@ describe('plan gates', () => {
   })
 })
 
+describe('nutri_app (app 9 €/mes con prueba de 7 días)', () => {
+  it('da acceso a Nutri Virtual pero no al Motor de Identidad', () => {
+    expect(NUTRI_PLANS).toContain('nutri_app')
+    expect(IDENTITY_PLANS).not.toContain('nutri_app')
+  })
+  it('tiene rango menor que gym_virtual_core', () => {
+    expect(PLAN_RANK.nutri_app).toBeGreaterThan(0)
+    expect(PLAN_RANK.nutri_app).toBeLessThan(PLAN_RANK.gym_virtual_core)
+  })
+  it('un plan de coaching activo gana sobre nutri_app', () => {
+    expect(computeEffectivePlan(['nutri_app', 'training_club'])).toBe('training_club')
+    expect(computeEffectivePlan(['nutri_app', 'gym_virtual_core'])).toBe('gym_virtual_core')
+  })
+  it('al cancelar el plan de coaching queda nutri_app', () => {
+    expect(computeEffectivePlan(['nutri_app'])).toBe('nutri_app')
+  })
+})
+
 // ─── resolveWebhookFields — lógica de extracción root / customData ───────────
 // Prueba la misma lógica que usa el handler, sin necesidad de levantar HTTP.
 

@@ -1,6 +1,7 @@
 import Stripe from 'stripe'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/auth-server'
+import { findOrCreateUser } from '@/lib/users'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
@@ -14,18 +15,8 @@ const PRICE_PLAN_MAP: Record<string, { plan: string; durationDays: number | null
   'price_1TxtIuBb2DLBnuHzi22kwiIr': { plan: 'test_temp',        durationDays: 1,   recurring: false },
 }
 
-async function findOrCreateUser(email: string): Promise<string> {
-  const { data: { users } } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 })
-  const existing = users.find((u) => u.email?.toLowerCase() === email)
-  if (existing) return existing.id
-
-  // User doesn't exist yet — invite them (creates auth account + sends magic link)
-  const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-    redirectTo: 'https://nutri-virtual.vercel.app/login',
-  })
-  if (error || !data.user) throw new Error(`inviteUserByEmail failed: ${error?.message}`)
-  return data.user.id
-}
+// Stripe invites land on /login (legacy flow)
+const STRIPE_INVITE_REDIRECT = 'https://nutri-virtual.vercel.app/login'
 
 async function upsertAccess(params: {
   userId: string
@@ -128,7 +119,7 @@ export async function POST(req: NextRequest) {
         }
 
         const { plan, durationDays } = PRICE_PLAN_MAP[priceId]
-        const userId = await findOrCreateUser(email)
+        const userId = await findOrCreateUser(email, STRIPE_INVITE_REDIRECT)
         await upsertAccess({ userId, email, plan, stripeCustomerId: customerId, stripePriceId: priceId, durationDays })
         console.log(`[stripe-webhook] checkout.session.completed → ${email} plan=${plan}`)
         break

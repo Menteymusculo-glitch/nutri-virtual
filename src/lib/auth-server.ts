@@ -62,6 +62,12 @@ export async function hasNutriAccess(userId: string): Promise<boolean> {
   return data?.status === 'active' && NUTRI_PLANS.includes(data?.plan as typeof NUTRI_PLANS[number])
 }
 
+// Gate for the calorie tracker — same plans as Nutri Virtual today (NUTRI_PLANS).
+// Kept separate so the tracker can diverge later without touching every route.
+export async function hasTrackerAccess(userId: string): Promise<boolean> {
+  return hasNutriAccess(userId)
+}
+
 // Gate for Motor de Identidad — training_club or premium only (not gym_virtual_core)
 export async function hasIdentityAccess(userId: string): Promise<boolean> {
   if (await isAdmin(userId)) return true

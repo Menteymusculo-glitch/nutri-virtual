@@ -73,9 +73,12 @@ const { mockDB, mockFrom, mockListUsers, mockInviteUser } = vi.hoisted(() => {
         }
         if (table === 'access') {
           const uid = s.filters.user_id as string
+          const email = s.filters.email as string | undefined
           const row = uid
             ? (mockDB.accessRow?.user_id === uid ? mockDB.accessRow : null)
-            : mockDB.accessRow
+            : email
+              ? (mockDB.accessRow?.email === email ? mockDB.accessRow : null)
+              : mockDB.accessRow
           return Promise.resolve({ data: row ?? null, error: null })
         }
         return Promise.resolve({ data: null, error: null })
@@ -141,7 +144,7 @@ vi.mock('@/lib/auth-server', () => ({
       },
     },
   },
-  NUTRI_PLANS:     ['training_club', 'premium', 'gym_virtual_core'],
+  NUTRI_PLANS:     ['training_club', 'premium', 'gym_virtual_core', 'nutri_app'],
   IDENTITY_PLANS:  ['training_club', 'premium'],
 }))
 

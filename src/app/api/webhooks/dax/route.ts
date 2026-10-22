@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/auth-server'
+import { findOrCreateUser, findUserIdByEmail } from '@/lib/users'
 import { computeEffectivePlan, determineAccessAction, PLAN_RANK } from '@/lib/dax-logic'
 
 // DAX product slug → internal plan name (add new products here only)
@@ -7,20 +8,13 @@ const DAX_PLAN_MAP: Record<string, string> = {
   training_club:    'training_club',
   premium:          'premium',
   gym_virtual_core: 'gym_virtual_core',
+  nutri_app:        'nutri_app',
 }
 
-async function findOrCreateUser(email: string): Promise<string> {
-  const { data: { users } } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 })
-  const existing = users.find((u) => u.email?.toLowerCase() === email)
-  if (existing) return existing.id
-
-  const redirectTo = process.env.NEXT_PUBLIC_APP_URL
+function inviteRedirect(): string {
+  return process.env.NEXT_PUBLIC_APP_URL
     ? `${process.env.NEXT_PUBLIC_APP_URL}/nutrivirtual`
     : 'https://herramientas.menteymusculo.com/nutrivirtual'
-
-  const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, { redirectTo })
-  if (error || !data.user) throw new Error(`inviteUserByEmail failed: ${error?.message}`)
-  return data.user.id
 }
 
 async function getActiveDaxPlans(userId: string): Promise<string[]> {
@@ -113,7 +107,7 @@ export async function POST(req: NextRequest) {
 
   try {
     if (type === 'subscription_created') {
-      const userId = await findOrCreateUser(normalizedEmail)
+      const userId = await findOrCreateUser(normalizedEmail, inviteRedirect())
 
       // Upsert in dax_subscriptions — email is already lowercased, so (email,plan)
       // uniqueness is guaranteed even when user_id is NULL (ON DELETE SET NULL).
@@ -135,10 +129,9 @@ export async function POST(req: NextRequest) {
 
       // Re-compute effective plan from remaining active products
       // Need userId to query dax_subscriptions by user_id
-      const { data: { users } } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 })
-      const user = users.find((u) => u.email?.toLowerCase() === normalizedEmail)
-      if (user) {
-        await applyEffectivePlan(user.id, normalizedEmail)
+      const userId = await findUserIdByEmail(normalizedEmail)
+      if (userId) {
+        await applyEffectivePlan(userId, normalizedEmail)
       }
 
       console.log(`[dax-webhook] subscription_cancelled → ${normalizedEmail} plan=${plan}`)
