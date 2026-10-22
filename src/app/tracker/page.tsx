@@ -1,9 +1,11 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import type { DayReport, WeekAdjustment, DayTotal } from '@/lib/calorieReport'
 import { COPY, SUPPORT_URL, dayCopy, weekCopy, fmtKcal, type AlertCopy } from '@/lib/reportCopy'
-import { kcalFor, sumNutrients } from '@/lib/mealMath'
+import { gramsForPortion, kcalFor, sumNutrients } from '@/lib/mealMath'
+import { PREP_LABELS } from '@/lib/foodSearch'
 import { targetRaisedToFloor, type ActivityLevel, type Goal } from '@/lib/energy'
 
 // ── Tipos de las respuestas de la API ────────────────────────────────────────
@@ -18,8 +20,13 @@ interface MealItem { id: string; name: string; grams: number; kcal: number }
 interface Meal { id: string; meal_type: string | null; total_kcal: number; meal_items: MealItem[] }
 interface DayData { date: string; today: string; closed: boolean; target: Target | null; meals: Meal[]; report: DayReport }
 interface WeekData { days: DayTotal[]; adjustment: WeekAdjustment }
-interface Food { id: string; name: string; kcal_100g: number; protein_100g: number | null; carbs_100g: number | null; fat_100g: number | null }
-interface DraftItem { food: Food; grams: string }
+interface Portion { label: string; grams: number }
+interface Food {
+  id: string; name: string; kcal_100g: number; protein_100g: number | null; carbs_100g: number | null; fat_100g: number | null
+  prep_state: string | null; quality: string; portions: Portion[]
+}
+// portion = -1 → la cantidad está en gramos; si no, es el índice de food.portions.
+interface DraftItem { food: Food; amount: string; portion: number }
 interface ProfileForm { sex: '' | 'female' | 'male'; age: string; weightKg: string; heightCm: string; activity: ActivityLevel; bodyFatPct: string; goal: Goal }
 
 const GRADIENT = 'linear-gradient(135deg,#FFD700,#FFA500,#FF6347,#DC143C)'
@@ -343,6 +350,25 @@ function Alerts({ alerts }: { alerts: AlertCopy[] }) {
 }
 
 // ── Añadir comida (manual) ───────────────────────────────────────────────────
+function itemGrams(it: DraftItem): number {
+  const amount = Number(it.amount)
+  if (it.portion < 0) return isFinite(amount) && amount > 0 ? amount : 0
+  return gramsForPortion(amount, it.food.portions[it.portion]?.grams ?? 0)
+}
+
+// Estado (crudo, cocido…) y aviso de valor estimado junto al nombre del alimento.
+function FoodMeta({ food }: { food: Food }) {
+  const prep = food.prep_state ? PREP_LABELS[food.prep_state] : null
+  const approx = food.quality === 'approx'
+  if (!prep && !approx) return null
+  return (
+    <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 4, marginLeft: 6, verticalAlign: 'middle' }}>
+      {prep && <span style={tagStyle}>{prep}</span>}
+      {approx && <span title={COPY.estimateHint} style={{ ...tagStyle, background: '#fffaf0', color: '#c05621', border: '1px solid #fbd38d' }}>{COPY.estimateBadge}</span>}
+    </span>
+  )
+}
+
 function AddMeal({ date, hide, onCancel, onSaved }: { date: string; hide: boolean; onCancel: () => void; onSaved: () => void }) {
   const [mealType, setMealType] = useState('')
   const [q, setQ] = useState('')
@@ -368,13 +394,14 @@ function AddMeal({ date, hide, onCancel, onSaved }: { date: string; hide: boolea
 
   // Vista previa en el navegador; las kcal definitivas se calculan en el servidor.
   const preview = useMemo(
-    () => sumNutrients(items.map((i) => kcalFor(i.food, Number(i.grams)))).kcal,
+    () => sumNutrients(items.map((i) => kcalFor(i.food, itemGrams(i)))).kcal,
     [items],
   )
 
   const save = async () => {
     setError('')
     if (items.length === 0) { setError('Añade al menos un alimento.'); return }
+    if (items.some((i) => itemGrams(i) <= 0 || itemGrams(i) > 3000)) { setError('Revisa las cantidades: cada alimento debe pesar entre 1 y 3000 g.'); return }
     setSaving(true)
     const r = await api('/api/meals', {
       method: 'POST',
@@ -382,7 +409,7 @@ function AddMeal({ date, hide, onCancel, onSaved }: { date: string; hide: boolea
         log_date: date,
         meal_type: mealType || null,
         source: 'manual',
-        items: items.map((i) => ({ food_id: i.food.id, grams: Number(i.grams) })),
+        items: items.map((i) => ({ food_id: i.food.id, grams: itemGrams(i) })),
       }),
     })
     setSaving(false)
@@ -412,11 +439,11 @@ function AddMeal({ date, hide, onCancel, onSaved }: { date: string; hide: boolea
       {visibleResults.length > 0 && (
         <div style={{ maxHeight: 220, overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: 10, marginTop: 6 }}>
           {visibleResults.map((f) => (
-            <button key={f.id} onClick={() => { setItems((xs) => [...xs, { food: f, grams: '100' }]); setQ(''); setResults([]) }} style={{
-              display: 'flex', justifyContent: 'space-between', width: '100%', padding: '10px 12px', border: 'none',
+            <button key={f.id} onClick={() => { setItems((xs) => [...xs, { food: f, amount: '100', portion: -1 }]); setQ(''); setResults([]) }} style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '10px 12px', border: 'none',
               borderBottom: '1px solid #edf2f7', background: 'white', cursor: 'pointer', fontSize: 14, color: '#2d3748', textAlign: 'left', fontFamily: 'inherit',
             }}>
-              <span>{f.name}</span>
+              <span>{f.name}<FoodMeta food={f} /></span>
               {!hide && <span style={{ color: '#a0aec0', fontSize: 12, flexShrink: 0, marginLeft: 8 }}>{Math.round(f.kcal_100g)} kcal/100 g</span>}
             </button>
           ))}
@@ -425,24 +452,46 @@ function AddMeal({ date, hide, onCancel, onSaved }: { date: string; hide: boolea
 
       {items.length > 0 && (
         <div style={{ marginTop: 14 }}>
-          {items.map((it, idx) => (
-            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              <span style={{ flex: 1, fontSize: 14, color: '#2d3748' }}>{it.food.name}</span>
-              <input
-                aria-label={COPY.gramsLabel}
-                type="number" inputMode="decimal" min={1} max={3000}
-                value={it.grams}
-                onChange={(e) => setItems((xs) => xs.map((x, i) => i === idx ? { ...x, grams: e.target.value } : x))}
-                style={{ ...inputStyle, width: 90, padding: '8px 10px' }}
-              />
-              <span style={{ fontSize: 13, color: '#718096' }}>g</span>
-              <button onClick={() => setItems((xs) => xs.filter((_, i) => i !== idx))} style={linkBtn} aria-label="Quitar alimento">✕</button>
-            </div>
-          ))}
+          {items.map((it, idx) => {
+            const update = (patch: Partial<DraftItem>) => setItems((xs) => xs.map((x, i) => i === idx ? { ...x, ...patch } : x))
+            return (
+              <div key={idx} style={{ marginBottom: 12, paddingBottom: 10, borderBottom: '1px solid #edf2f7' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 6 }}>
+                  <span style={{ flex: 1, fontSize: 14, color: '#2d3748' }}>{it.food.name}<FoodMeta food={it.food} /></span>
+                  <button onClick={() => setItems((xs) => xs.filter((_, i) => i !== idx))} style={linkBtn} aria-label="Quitar alimento">✕</button>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input
+                    aria-label={it.portion < 0 ? COPY.gramsLabel : COPY.quantityLabel}
+                    type="number" inputMode="decimal" min={0} max={3000} step={it.portion < 0 ? 1 : 0.5}
+                    value={it.amount}
+                    onChange={(e) => update({ amount: e.target.value })}
+                    style={{ ...inputStyle, width: 80, padding: '8px 10px' }}
+                  />
+                  <select
+                    aria-label={COPY.unitLabel}
+                    value={it.portion}
+                    onChange={(e) => {
+                      const portion = Number(e.target.value)
+                      update({ portion, amount: portion < 0 ? String(Math.round(itemGrams(it)) || 100) : '1' })
+                    }}
+                    style={{ ...inputStyle, flex: 1, minWidth: 0, padding: '8px 10px' }}
+                  >
+                    <option value={-1}>{COPY.unitGrams}</option>
+                    {it.food.portions.map((p, i) => <option key={i} value={i}>{p.label} ({Math.round(p.grams)} g)</option>)}
+                  </select>
+                </div>
+                {it.portion >= 0 && <p style={{ ...hintStyle, margin: '4px 0 0' }}>= {itemGrams(it)} g</p>}
+              </div>
+            )
+          })}
           {!hide && <p style={hintStyle}>Total estimado: {fmtKcal(preview)}</p>}
         </div>
       )}
 
+      <p style={{ ...hintStyle, fontSize: 12 }}>
+        {COPY.sourcesNote} <Link href="/fuentes" target="_blank" style={{ color: '#c05621' }}>{COPY.sourcesLink}</Link>
+      </p>
       {error && <p style={errorStyle}>{error}</p>}
       <div style={{ display: 'flex', gap: 10 }}>
         <button style={{ ...btnStyle, background: '#edf2f7', color: '#4a5568' }} onClick={onCancel}>Cancelar</button>
@@ -668,6 +717,7 @@ const errorStyle: React.CSSProperties = { color: '#c05621', fontSize: 13, backgr
 const cardStyle: React.CSSProperties = { background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 14, marginBottom: 10 }
 const navBtn: React.CSSProperties = { width: 40, height: 40, borderRadius: 10, border: '1px solid #e2e8f0', background: 'white', fontSize: 22, cursor: 'pointer', color: '#4a5568' }
 const linkBtn: React.CSSProperties = { background: 'none', border: 'none', color: '#a0aec0', cursor: 'pointer', fontSize: 13, padding: 4, fontFamily: 'inherit' }
+const tagStyle: React.CSSProperties = { fontSize: 11, lineHeight: '16px', padding: '0 6px', borderRadius: 999, background: '#edf2f7', color: '#4a5568', whiteSpace: 'nowrap' }
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '12px 14px', border: '2px solid #e2e8f0', borderRadius: 10,
   fontSize: 16, background: '#f7fafc', fontFamily: 'inherit', color: '#2d3748',

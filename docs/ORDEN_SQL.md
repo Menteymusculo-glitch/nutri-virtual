@@ -11,29 +11,35 @@ Al final de cada archivo hay consultas de verificación (comentadas).
 | `sql/phase-2bis-tables.sql` | `dax_events_processed`, `usage_log`, `identity_diagnostics` |
 | `sql/phase-multiproduct.sql` | `dax_subscriptions` + backfill desde `access` |
 | `sql/phase-multiproduct-v2.sql` | Índice único `(email, plan)` en `dax_subscriptions` |
+| `sql/phase-user-link.sql` | `user_id` en `clients` y `checkins` (hotfix save-routes, confirmado por Ray) |
+| `sql/phase-rate-limits.sql` | Tabla `rate_limits` (hotfix save-routes, confirmado por Ray) |
 
 ## Pendientes, en este orden
 
 | # | Archivo | Rama | Debe ejecutarse antes de… | Depende de |
 |---|---|---|---|---|
-| 1 | `sql/phase-user-link.sql` | `hotfix/save-routes` | **Desplegar `hotfix/save-routes`** (save-plan y save-checkin escriben `user_id`; sin la columna fallan) | — |
-| 2 | `sql/phase-rate-limits.sql` | `hotfix/save-routes` | **Desplegar `hotfix/save-routes`** (sin la tabla, `/api/verify-code` responde 503) | — |
+| ~~1~~ | ~~`sql/phase-user-link.sql`~~ | ya ejecutada | — | — |
+| ~~2~~ | ~~`sql/phase-rate-limits.sql`~~ | ya ejecutada | — | — |
 | 3 | `sql/phase-leads.sql` | `feat/tracker-calorias` | Desplegar `feat/tracker-calorias`. Se puede ejecutar ya: el código de `main` ya inserta `tipo` y `datos` en `leads` | — |
 | 4 | `sql/phase-tracker.sql` | `feat/tracker-calorias` | **Desplegar `feat/tracker-calorias`** (tablas `foods`, `nutrition_targets`, `meal_logs`, `meal_items`) | — |
 | 5 | `sql/phase-tracker-seed.sql` | `feat/tracker-calorias` | **Desplegar `feat/tracker-calorias`** (sin alimentos, el buscador sale vacío) | #4 (tabla `foods`) |
 | 6 | `sql/phase-tracker-day-close.sql` | `feat/tracker-calorias` | **Desplegar `feat/tracker-calorias`** (tabla `day_closures`; sin ella fallan `/api/tracker/day`, `/week` y "Cerrar mi día") | #4 (por orden lógico; técnicamente solo necesita `auth.users`) |
+| 7 | `sql/phase-foods-intl.sql` | `feat/tracker-calorias` | **Desplegar `feat/tracker-calorias`** (columnas nuevas en `foods`, tabla `food_portions` y función `search_foods`; sin ella el buscador responde 500) | #4 |
+| 8 | `sql/phase-foods-intl-seed.sql` | `feat/tracker-calorias` | **Desplegar `feat/tracker-calorias`** (349 alimentos y 387 porciones; sustituye al seed #5) | #7 |
 
 ### Antes de cada despliegue
 
 - **Antes de desplegar `hotfix/save-routes`:** #1 y #2.
-- **Antes de desplegar `feat/tracker-calorias`:** #3, #4, #5 y #6. Además, #1 y #2 si para entonces la rama ya incluye el hotfix (al fusionar `main` con el hotfix dentro, su código llega también a esta rama).
+- **Antes de desplegar `feat/tracker-calorias`:** #3, #4, #5, #6, #7 y #8 (#1 y #2 ya están ejecutadas).
 
 ### Notas por archivo
 
 - **#1 `phase-user-link.sql`:** al final hay una consulta de políticas. Si aparece alguna política pública antigua en `clients` o `checkins`, avísame antes de borrarla. Los registros antiguos quedan con `user_id` NULL (no se asignan por nombre).
 - **#2 `phase-rate-limits.sql`:** recomendable añadir también la variable `RATE_LIMIT_SALT` en Vercel (texto aleatorio largo).
 - **#3 `phase-leads.sql`:** antes de ejecutarla, revisa las columnas reales de `leads` con la consulta del encabezado. Si alguna columna existente es `NOT NULL` y el código no la envía, avísame antes de ejecutar.
-- **#5 `phase-tracker-seed.sql`:** 168 alimentos; 36 marcados `APROX`/`REVISAR` para revisión. Volver a ejecutarla actualiza los valores de los alimentos `seed`.
+- **#5 `phase-tracker-seed.sql`:** 168 alimentos; 36 marcados `APROX`/`REVISAR` para revisión. Volver a ejecutarla actualiza los valores de los alimentos `seed`. **Queda sustituido por #8**: si se ejecutan #7 y #8 se puede saltar #5 (y si ya se ejecutó, #8 renombra o fusiona sus filas sin perder las comidas registradas). Si alguna vez se vuelve a ejecutar #5 después de #8, hay que volver a ejecutar #8.
+- **#7 `phase-foods-intl.sql`:** intenta activar `pg_trgm` (búsqueda tolerante a erratas). Si no se puede, la búsqueda sigue funcionando sin esa tolerancia.
+- **#8 `phase-foods-intl-seed.sql`:** generado por `scripts/import-usda.mjs` (no editar a mano). Es una transacción: o se aplica entero o no se aplica nada. Al final hay consultas de verificación con los recuentos esperados.
 
 ## ¿PROMPT_02 (cerrar el día) añadió alguna migración?
 

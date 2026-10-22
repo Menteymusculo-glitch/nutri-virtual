@@ -45,6 +45,13 @@ export function sumNutrients(items: Nutrients[]): { kcal: number; protein: numbe
   return { kcal: Math.round(t.kcal), protein: round1(t.protein), carbs: round1(t.carbs), fat: round1(t.fat) }
 }
 
+// Gramos de una porción casera: cantidad × gramos de la porción (1 decimal).
+// Devuelve 0 si la cantidad no es válida.
+export function gramsForPortion(quantity: number, portionGrams: number): number {
+  if (!isFinite(quantity) || quantity <= 0 || !isFinite(portionGrams) || portionGrams <= 0) return 0
+  return round1(quantity * portionGrams)
+}
+
 // Normaliza nombres para buscar en foods.name_norm: minúsculas, sin acentos,
 // solo letras/números/espacios, espacios colapsados.
 export function normalizeFoodName(s: string): string {

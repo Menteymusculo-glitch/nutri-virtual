@@ -106,17 +106,3 @@ export function parseTargetInput(body: unknown): Result<TargetInput> {
   }
   return { ok: true, value: out }
 }
-
-// Búsqueda de alimentos: ordena primero los que empiezan por la consulta,
-// luego por posición de la coincidencia y por longitud del nombre.
-export function rankFoods<T extends { name_norm: string }>(foods: T[], qNorm: string, limit = 20): T[] {
-  return [...foods]
-    .map((f) => {
-      const pos = f.name_norm.indexOf(qNorm)
-      const wordStart = pos === 0 || (pos > 0 && f.name_norm[pos - 1] === ' ')
-      return { f, score: (pos === 0 ? 0 : wordStart ? 1 : 2) * 1000 + Math.max(pos, 0) * 10 + f.name_norm.length }
-    })
-    .sort((a, b) => a.score - b.score)
-    .slice(0, limit)
-    .map((x) => x.f)
-}

@@ -53,7 +53,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // Public legal pages — no login required
-  if (pathname === '/privacidad' || pathname === '/terminos') {
+  if (pathname === '/privacidad' || pathname === '/terminos' || pathname === '/fuentes') {
     return response
   }
 

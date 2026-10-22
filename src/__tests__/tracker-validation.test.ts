@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseMealInput, parseTargetInput, rankFoods, isUuid } from '@/lib/trackerValidation'
+import { parseMealInput, parseTargetInput, isUuid } from '@/lib/trackerValidation'
 
 const FOOD = '11111111-1111-4111-8111-111111111111'
 const okMeal = { log_date: '2026-10-22', meal_type: 'almuerzo', items: [{ food_id: FOOD, grams: 150 }] }
@@ -60,23 +60,6 @@ describe('parseTargetInput', () => {
     ['sin cambios', {}],
   ])('rechaza: %s', (_label, body) => {
     expect(parseTargetInput(body).ok).toBe(false)
-  })
-})
-
-describe('rankFoods', () => {
-  it('prioriza los que empiezan por la consulta, luego inicio de palabra', () => {
-    const foods = [
-      { name_norm: 'arroz con pollo' },
-      { name_norm: 'pollo' },
-      { name_norm: 'pechuga de pollo' },
-      { name_norm: 'repollo' },
-    ]
-    expect(rankFoods(foods, 'pollo').map((f) => f.name_norm)).toEqual([
-      'pollo', 'arroz con pollo', 'pechuga de pollo', 'repollo',
-    ])
-  })
-  it('respeta el límite', () => {
-    expect(rankFoods(Array(30).fill({ name_norm: 'pan' }), 'pan', 20)).toHaveLength(20)
   })
 })
 

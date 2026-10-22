@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { kcalFor, sumNutrients, normalizeFoodName } from '@/lib/mealMath'
+import { kcalFor, sumNutrients, normalizeFoodName, gramsForPortion } from '@/lib/mealMath'
 
 const arroz = { kcal_100g: 130, protein_100g: 2.7, carbs_100g: 28.2, fat_100g: 0.3 }
 
@@ -38,5 +38,19 @@ describe('normalizeFoodName', () => {
     expect(normalizeFoodName('  Plátano  Maduro (frito)! ')).toBe('platano maduro frito')
     expect(normalizeFoodName('Café con leche')).toBe('cafe con leche')
     expect(normalizeFoodName('Ñame')).toBe('name')
+  })
+})
+
+describe('gramsForPortion', () => {
+  it('cantidad × gramos de la porción, con 1 decimal', () => {
+    expect(gramsForPortion(1, 158)).toBe(158)
+    expect(gramsForPortion(0.5, 158)).toBe(79)
+    expect(gramsForPortion(1.5, 28.35)).toBe(42.5)
+  })
+  it('0 si la cantidad o la porción no son válidas', () => {
+    expect(gramsForPortion(0, 100)).toBe(0)
+    expect(gramsForPortion(-1, 100)).toBe(0)
+    expect(gramsForPortion(NaN, 100)).toBe(0)
+    expect(gramsForPortion(1, 0)).toBe(0)
   })
 })
