@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { DayReport, WeekAdjustment, DayTotal } from '@/lib/calorieReport'
-import { COPY, SUPPORT_URL, dayCopy, weekCopy, fmtKcal } from '@/lib/reportCopy'
+import { COPY, SUPPORT_URL, dayCopy, weekCopy, fmtKcal, type AlertCopy } from '@/lib/reportCopy'
 import { kcalFor, sumNutrients } from '@/lib/mealMath'
-import type { ActivityLevel, Goal } from '@/lib/energy'
+import { targetRaisedToFloor, type ActivityLevel, type Goal } from '@/lib/energy'
 
 // ── Tipos de las respuestas de la API ────────────────────────────────────────
 interface Target {
@@ -147,9 +147,9 @@ export default function TrackerPage() {
     return () => { cancelled = true }
   }, [phase, tab, dayVersion])
 
-  const flash = (msg: string) => {
+  const flash = (msg: string, ms = 3000) => {
     setToast(msg)
-    setTimeout(() => setToast(''), 3000)
+    setTimeout(() => setToast(''), ms)
   }
 
   const [closing, setClosing] = useState(false)
@@ -198,7 +198,11 @@ export default function TrackerPage() {
         <ProfileEditor
           intro={COPY.welcome.formIntro}
           submitLabel={COPY.welcome.start}
-          onSaved={(t) => { setTarget(t); setPhase('ready') }}
+          onSaved={(t) => {
+            setTarget(t)
+            setPhase('ready')
+            if (targetRaisedToFloor(t.tdee_kcal, t.goal)) flash(COPY.targetFloorNote, 8000)
+          }}
         />
         <Footer />
       </Shell>
@@ -312,6 +316,28 @@ function DayHeader({ report, hide }: { report: DayReport; hide: boolean }) {
       {c.deviation && <p style={{ ...pStyle, margin: '0 0 6px', fontWeight: 600 }}>{c.deviation}</p>}
       {c.balance && <p style={{ ...hintStyle, margin: '0 0 6px' }}>{c.balance}</p>}
       <p style={{ ...pStyle, margin: 0 }}>{c.encouragement}</p>
+      <Alerts alerts={c.alerts} />
+    </div>
+  )
+}
+
+// Alertas de suelo/techo: informan, nunca bloquean el registro.
+function Alerts({ alerts }: { alerts: AlertCopy[] }) {
+  if (alerts.length === 0) return null
+  return (
+    <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {alerts.map((a) => (
+        <div key={a.kind} role="note" style={{
+          background: a.kind === 'suelo' ? '#fffaf0' : '#f7fafc',
+          border: `1px solid ${a.kind === 'suelo' ? '#f6ad55' : '#cbd5e0'}`,
+          borderRadius: 10, padding: '10px 12px', fontSize: 13, lineHeight: 1.5, color: '#4a5568',
+        }}>
+          {a.text}
+          {a.linkLabel && (
+            <> <a href={SUPPORT_URL} style={{ color: '#c05621', fontWeight: 600 }}>{a.linkLabel}</a>.</>
+          )}
+        </div>
+      ))}
     </div>
   )
 }
@@ -456,6 +482,7 @@ function WeekView({ week, hide }: { week: WeekData; hide: boolean }) {
       <div style={{ ...cardStyle, borderLeft: '4px solid #FF6347' }}>
         <h3 style={{ fontSize: 17, fontWeight: 700, color: '#2d3748', marginBottom: 8 }}>{c.headline}</h3>
         {c.detail.map((line) => <p key={line} style={{ ...pStyle, margin: '0 0 6px' }}>{line}</p>)}
+        <Alerts alerts={c.alerts} />
       </div>
     </div>
   )
@@ -508,6 +535,11 @@ function Settings({ target, onSaved }: { target: Target; onSaved: (t: Target) =>
       {!target.hide_calories && (
         <p style={{ ...hintStyle, marginTop: 12 }}>
           Objetivo actual: {fmtKcal(target.target_kcal)} · Gasto estimado: {fmtKcal(target.tdee_kcal)}
+        </p>
+      )}
+      {targetRaisedToFloor(target.tdee_kcal, target.goal) && (
+        <p style={{ ...hintStyle, marginTop: 8 }}>
+          {COPY.targetFloorNote} <a href={SUPPORT_URL} style={{ color: '#c05621' }}>soporte@menteymusculo.com</a>
         </p>
       )}
 

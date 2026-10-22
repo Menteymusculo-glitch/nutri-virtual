@@ -1,6 +1,6 @@
 // Gasto energético: BMR, TDEE y objetivo calórico.
 // Todo es una ESTIMACIÓN: las ecuaciones tienen un error típico de ±10%.
-import { kcalFloor, type Sex } from '@/lib/nutritionConstants'
+import { KCAL_FLOOR, kcalFloor, type Sex } from '@/lib/nutritionConstants'
 
 export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active'
 export type Goal = 'deficit' | 'maintenance' | 'surplus'
@@ -92,8 +92,18 @@ export function targetKcal(tdeeKcal: number, goal: Goal, sex: Sex | null | undef
   return Math.max(Math.round(tdeeKcal * GOAL_FACTORS[goal]), kcalFloor(sex))
 }
 
+// true si el objetivo calculado quedaba por debajo del suelo y se subió a él
+// (la UI muestra una nota amable).
+export function targetRaisedToFloor(tdeeKcal: number, goal: Goal): boolean {
+  return Math.round(tdeeKcal * GOAL_FACTORS[goal]) < KCAL_FLOOR
+}
+
 export function computeEnergy(p: EnergyInput, goal: Goal) {
   const b = bmr(p)
   const t = tdee(b.kcal, p.activity)
-  return { bmrKcal: b.kcal, method: b.method, tdeeKcal: t, targetKcal: targetKcal(t, goal, p.sex) }
+  return {
+    bmrKcal: b.kcal, method: b.method, tdeeKcal: t,
+    targetKcal: targetKcal(t, goal, p.sex),
+    raisedToFloor: targetRaisedToFloor(t, goal),
+  }
 }

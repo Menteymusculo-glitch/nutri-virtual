@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import {
   dayReport, weekAdjustment, energyBalance, lastNDates, isValidDate, isDayClosed, weekWindow, shiftDate,
-  isPlausibleToday, type DayTotal,
+  isPlausibleToday, floorAlertFor, ceilingAlertFor, type DayTotal,
 } from '@/lib/calorieReport'
-import { KCAL_FLOOR_FEMALE, KCAL_FLOOR_MALE } from '@/lib/nutritionConstants'
+import { KCAL_FLOOR } from '@/lib/nutritionConstants'
 
 // Los casos de estado (en_zona / por_debajo / por_encima) son de días cerrados.
 const closedDay = (p: Omit<Parameters<typeof dayReport>[0], 'closed'>) => dayReport({ ...p, closed: true })
@@ -156,21 +156,21 @@ describe('weekAdjustment', () => {
     // Objetivo 1300, media 900 → +130 daría 1030 < 1200 → se sube al suelo.
     const w = weekAdjustment({ target: 1300, tdee: 1500, sex: 'female', days: week([900, 900, 900]) })
     if (w.kind !== 'subir') throw new Error(w.kind)
-    expect(w.suggestedDaily).toBe(KCAL_FLOOR_FEMALE)
+    expect(w.suggestedDaily).toBe(KCAL_FLOOR)
     expect(w.limitedByFloor).toBe(true)
   })
 
-  it('objetivo guardado por debajo del suelo se eleva al suelo', () => {
-    const w = weekAdjustment({ target: 1000, tdee: 1400, sex: 'male', days: week([1500, 1500, 1500]) })
+  it('objetivo guardado por debajo del suelo se eleva al suelo (también para hombres)', () => {
+    const w = weekAdjustment({ target: 1000, tdee: 1400, sex: 'male', days: week([1250, 1250, 1250]) })
     if (w.kind !== 'mantener') throw new Error(w.kind)
-    expect(w.target).toBe(KCAL_FLOOR_MALE)
+    expect(w.target).toBe(KCAL_FLOOR)
   })
 
   it('bajar nunca sugiere menos del suelo', () => {
     // Objetivo bajo el suelo (1100 → 1200); media 1500 (+25%), tope 120 → 1380 ≥ 1200
     const w = weekAdjustment({ target: 1100, tdee: 1400, sex: 'female', days: week([1500, 1500, 1500]) })
     if (w.kind !== 'bajar') throw new Error(w.kind)
-    expect(w.suggestedDaily).toBeGreaterThanOrEqual(KCAL_FLOOR_FEMALE)
+    expect(w.suggestedDaily).toBeGreaterThanOrEqual(KCAL_FLOOR)
     expect(w.adjustKcal).toBeLessThanOrEqual(120)
   })
 
@@ -328,5 +328,75 @@ describe('shiftDate e isPlausibleToday', () => {
     expect(isPlausibleToday('2026-10-23', now)).toBe(true)
     expect(isPlausibleToday('2026-10-25', now)).toBe(false)
     expect(isPlausibleToday('basura', now)).toBe(false)
+  })
+})
+
+describe('alerta de suelo (1.200 kcal)', () => {
+  const day = (consumed: number, closed = true) => dayReport({ consumed, target: 1500, tdee: 1800, closed, goal: 'deficit' })
+
+  it('floorAlertFor: justo 1.200 no alerta, 1.199 sí, 0 no', () => {
+    expect(floorAlertFor(1200)).toBe(false)
+    expect(floorAlertFor(1199)).toBe(true)
+    expect(floorAlertFor(0)).toBe(false)
+  })
+
+  it('día cerrado con 1.199 → alerta; con 1.200 → no', () => {
+    expect(day(1199).floorAlert).toBe(true)
+    expect(day(1200).floorAlert).toBe(false)
+  })
+
+  it('no en el día en curso ni en días sin registro', () => {
+    expect(day(800, false).floorAlert).toBe(false)
+    expect(day(0, true).floorAlert).toBe(false)
+  })
+
+  it('día cerrado sin objetivo también alerta (es de seguridad)', () => {
+    expect(dayReport({ consumed: 900, target: null, tdee: null, closed: true }).floorAlert).toBe(true)
+    expect(dayReport({ consumed: 900, target: null, tdee: null, closed: false }).floorAlert).toBe(false)
+  })
+
+  it('promedio semanal bajo 1.200 → alerta; justo 1.200 → no', () => {
+    const w1 = weekAdjustment({ target: 1500, tdee: 1800, sex: 'female', days: week([1199, 1199, 1199]) })
+    const w2 = weekAdjustment({ target: 1500, tdee: 1800, sex: 'female', days: week([1200, 1200, 1200]) })
+    if (w1.kind === 'pocos_datos' || w1.kind === 'sin_objetivo') throw new Error(w1.kind)
+    if (w2.kind === 'pocos_datos' || w2.kind === 'sin_objetivo') throw new Error(w2.kind)
+    expect(w1.floorAlert).toBe(true)
+    expect(w2.floorAlert).toBe(false)
+  })
+
+  it('sin datos suficientes en la semana no hay alerta (no hay promedio)', () => {
+    const w = weekAdjustment({ target: 1500, tdee: 1800, sex: 'female', days: week([800, 0, 0]) })
+    expect(w).not.toHaveProperty('floorAlert')
+  })
+})
+
+describe('alerta de techo', () => {
+  it('déficit: techo = TDEE; justo en el TDEE no alerta, 1 kcal más sí', () => {
+    expect(ceilingAlertFor(2300, 1955, 2300, 'deficit')).toBeNull()
+    expect(ceilingAlertFor(2301, 1955, 2300, 'deficit')).toBe('sobre_gasto')
+  })
+
+  it('mantenimiento/superávit: techo = objetivo +10%', () => {
+    expect(ceilingAlertFor(2200, 2000, 2000, 'maintenance')).toBeNull()
+    expect(ceilingAlertFor(2201, 2000, 2000, 'maintenance')).toBe('sobre_techo')
+    expect(ceilingAlertFor(2420, 2200, 2000, 'surplus')).toBeNull()
+    expect(ceilingAlertFor(2421, 2200, 2000, 'surplus')).toBe('sobre_techo')
+  })
+
+  it('sin objetivo definido o sin consumo → null', () => {
+    expect(ceilingAlertFor(3000, 2000, 2000, null)).toBeNull()
+    expect(ceilingAlertFor(0, 2000, 2000, 'deficit')).toBeNull()
+  })
+
+  it('dayReport: solo con el día cerrado', () => {
+    const p = { consumed: 2400, target: 1955, tdee: 2300, goal: 'deficit' as const }
+    expect(dayReport({ ...p, closed: true }).ceilingAlert).toBe('sobre_gasto')
+    expect(dayReport({ ...p, closed: false }).ceilingAlert).toBeNull()
+  })
+
+  it('semana: promedio por encima del TDEE con objetivo déficit', () => {
+    const w = weekAdjustment({ target: 1955, tdee: 2300, sex: 'female', goal: 'deficit', days: week([2400, 2400, 2400]) })
+    if (w.kind === 'pocos_datos' || w.kind === 'sin_objetivo') throw new Error(w.kind)
+    expect(w.ceilingAlert).toBe('sobre_gasto')
   })
 })

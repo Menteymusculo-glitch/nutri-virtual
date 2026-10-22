@@ -1,7 +1,8 @@
 // Todos los textos del tracker en un solo sitio, para que Ray los revise.
 // Tono: directo, empoderador, elegante. Sin culpa ni castigo.
 // Los tests (src/__tests__/report-copy.test.ts) fallan si aparece una palabra prohibida.
-import type { DayReport, WeekAdjustment, EnergyBalance } from '@/lib/calorieReport'
+import type { DayReport, WeekAdjustment, EnergyBalance, CeilingAlert } from '@/lib/calorieReport'
+import { KCAL_FLOOR } from '@/lib/nutritionConstants'
 
 // Palabras y expresiones que NUNCA deben aparecer en la interfaz.
 // Se comparan en minúsculas y sin acentos.
@@ -12,8 +13,7 @@ export const FORBIDDEN_TERMS = [
   'deberias', 'prohibido', 'arruinaste', 'malo', 'mala',
 ]
 
-// TODO(Ray): confirmar el canal de apoyo (email, WhatsApp, Calendly…).
-export const SUPPORT_URL = 'mailto:ray@menteymusculo.com?subject=Necesito%20apoyo%20con%20mi%20alimentaci%C3%B3n'
+export const SUPPORT_URL = 'mailto:soporte@menteymusculo.com?subject=Necesito%20apoyo%20con%20mi%20alimentaci%C3%B3n'
 
 export const fmtKcal = (n: number) => `${Math.round(n).toLocaleString('es-ES')} kcal`
 
@@ -25,6 +25,8 @@ export const COPY = {
   closeDay: 'Cerrar mi día',
   closeDayHint: 'Ciérralo cuando hayas registrado tu última comida para ver tu resumen del día.',
   dayClosed: 'Día cerrado. ¡Gracias por registrar!',
+  targetFloorNote: 'Tu objetivo se ajustó al mínimo diario recomendado. Si quieres revisarlo, escribe a soporte.',
+  supportCta: 'Si quieres, hablemos',
   deleteMeal: 'Quitar',
   confirmDelete: '¿Quitar esta comida del registro?',
   noMeals: 'Aún no hay comidas registradas hoy. Te invito a añadir la primera: cada registro es una victoria.',
@@ -106,24 +108,64 @@ export function progressPhrase(r: Pick<DayReport, 'consumed' | 'target'>): strin
   return r.target ? `Llevas ${n(r.consumed)} de ${n(r.target)} kcal` : `Llevas ${n(r.consumed)} kcal`
 }
 
+// ── Alertas de suelo y techo ─────────────────────────────────────────────────
+export interface AlertCopy {
+  kind: 'suelo' | 'techo'
+  text: string
+  linkLabel?: string // solo la de suelo enlaza a soporte
+}
+
+const floorRef = (hide: boolean) => (hide ? '' : ` (${fmtKcal(KCAL_FLOOR)})`)
+
+export function floorAlertText(scope: 'dia' | 'semana', hide: boolean): string {
+  const subject = scope === 'dia' ? 'Este día estuviste' : 'Tu promedio de la semana está'
+  return `${subject} por debajo del mínimo diario recomendado${floorRef(hide)}. Tu cuerpo necesita energía para rendir y recuperarse.`
+}
+
+const CEILING_TEXT: Record<'dia' | 'semana', string> = {
+  dia: 'Hoy estuviste por encima de tu gasto estimado, así que no hubo déficit. Es información, no un juicio: lo que cuenta es la tendencia de la semana.',
+  semana: 'Tu promedio de la semana estuvo por encima de tu gasto estimado, así que no hubo déficit. Es información, no un juicio: lo que cuenta es la tendencia.',
+}
+
+// Reglas:
+// - Suelo: siempre se muestra (es de seguridad), también en modo oculto pero sin cifras.
+// - Techo: solo 'sobre_gasto' (objetivo déficit) tiene texto propio; 'sobre_techo' coincide
+//   con el estado "Por encima de tu objetivo" y no se repite. En modo oculto no se muestra.
+export function alertsCopy(
+  a: { floorAlert: boolean; ceilingAlert: CeilingAlert },
+  scope: 'dia' | 'semana',
+  opts: { hideCalories?: boolean } = {},
+): AlertCopy[] {
+  const hide = !!opts.hideCalories
+  const out: AlertCopy[] = []
+  if (a.floorAlert) out.push({ kind: 'suelo', text: floorAlertText(scope, hide), linkLabel: COPY.supportCta })
+  if (a.ceilingAlert === 'sobre_gasto' && !hide) out.push({ kind: 'techo', text: CEILING_TEXT[scope] })
+  return out
+}
+
 export interface DayCopy {
   label: string
   numbers: string | null // "1.650 kcal de 1.800 kcal" o, con el día abierto, "Llevas 650 de 1.800 kcal"
   deviation: string | null
   balance: string | null
   encouragement: string
+  alerts: AlertCopy[]
 }
 
 export function dayCopy(r: DayReport, opts: { hideCalories?: boolean } = {}): DayCopy {
   const label = statusLabel(r.status)
-  const encouragement = STATUS_ENCOURAGEMENT[r.status]
+  // Si ya sale la alerta de suelo, no repetimos el mensaje de "nutrirte bien".
+  const encouragement = r.floorAlert && r.status === 'por_debajo'
+    ? 'Gracias por registrar: cada registro te da información valiosa.'
+    : STATUS_ENCOURAGEMENT[r.status]
+  const alerts = alertsCopy(r, 'dia', opts)
   if (opts.hideCalories) {
-    // Solo estado y ánimo; ningún número.
-    return { label, numbers: null, deviation: null, balance: null, encouragement }
+    // Solo estado, ánimo y alerta de suelo; ningún número.
+    return { label, numbers: null, deviation: null, balance: null, encouragement, alerts }
   }
   if (r.status === 'en_curso') {
     // Día abierto: solo progreso, sin desviación ni balance.
-    return { label, numbers: progressPhrase(r), deviation: null, balance: null, encouragement }
+    return { label, numbers: progressPhrase(r), deviation: null, balance: null, encouragement, alerts }
   }
   return {
     label,
@@ -131,17 +173,19 @@ export function dayCopy(r: DayReport, opts: { hideCalories?: boolean } = {}): Da
     deviation: deviationPhrase(r),
     balance: balancePhrase(r.balance),
     encouragement,
+    alerts,
   }
 }
 
 export interface WeekCopy {
   headline: string
   detail: string[]
+  alerts: AlertCopy[]
 }
 
 export function weekCopy(w: WeekAdjustment, opts: { hideCalories?: boolean } = {}): WeekCopy {
   if (w.kind === 'sin_objetivo') {
-    return { headline: 'Define tu objetivo', detail: ['Te invito a definir tu objetivo en Ajustes para ver tu semana.'] }
+    return { headline: 'Define tu objetivo', detail: ['Te invito a definir tu objetivo en Ajustes para ver tu semana.'], alerts: [] }
   }
   if (w.kind === 'pocos_datos') {
     const dias = w.loggedDays === 1 ? '1 día completo' : `${w.loggedDays} días completos`
@@ -152,6 +196,7 @@ export function weekCopy(w: WeekAdjustment, opts: { hideCalories?: boolean } = {
         'El día de hoy cuenta cuando lo cierras.',
         'Te invito a seguir registrando: cada registro es una victoria.',
       ],
+      alerts: [],
     }
   }
 
@@ -162,17 +207,20 @@ export function weekCopy(w: WeekAdjustment, opts: { hideCalories?: boolean } = {
   const noRebound = 'Es un ajuste suave del promedio diario, no hace falta comer menos al día siguiente de un día con más.'
   const floorNote = 'Por tu bienestar, no sugerimos bajar del mínimo diario recomendado.'
 
+  const alerts = alertsCopy(w, 'semana', opts)
   const lines = (main: string | null, ...rest: (string | null)[]) =>
     [avg, main, balance, ...rest, days].filter((x): x is string => !!x)
 
   if (w.kind === 'mantener') {
     return {
+      alerts,
       headline: 'Vas en tu zona',
       detail: lines('Lo estás haciendo muy bien: te invito a mantener este ritmo.'),
     }
   }
   if (w.kind === 'bajar') {
     return {
+      alerts,
       headline: 'Un pequeño ajuste',
       detail: lines(
         hide
@@ -184,13 +232,15 @@ export function weekCopy(w: WeekAdjustment, opts: { hideCalories?: boolean } = {
     }
   }
   return {
+    alerts,
     headline: 'Dale más energía a tu cuerpo',
     detail: lines(
       hide
         ? 'Tu promedio está por debajo de tu objetivo. Te invito a añadir un poco más en tus comidas esta semana.'
         : `Te invito a apuntar a unas ${fmtKcal(w.suggestedDaily)} diarias esta semana (unas ${w.adjustKcal} kcal más al día).`,
       'Nutrirte bien también es parte del proceso.',
-      w.limitedByFloor ? 'Por tu bienestar, te recomendamos no quedarte por debajo del mínimo diario recomendado.' : null,
+      // Con promedio bajo el suelo ya sale la alerta de suelo; no la repetimos aquí.
+      w.limitedByFloor && !w.floorAlert ? 'Por tu bienestar, te recomendamos no quedarte por debajo del mínimo diario recomendado.' : null,
     ),
   }
 }

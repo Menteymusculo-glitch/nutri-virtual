@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import {
-  mifflinStJeor, katchMcArdle, bmr, tdee, targetKcal, computeEnergy, validateEnergyInput,
+  mifflinStJeor, katchMcArdle, bmr, tdee, targetKcal, computeEnergy, validateEnergyInput, targetRaisedToFloor,
   ACTIVITY_FACTORS,
 } from '@/lib/energy'
-import { KCAL_FLOOR_FEMALE, KCAL_FLOOR_MALE } from '@/lib/nutritionConstants'
+import { KCAL_FLOOR, kcalFloor } from '@/lib/nutritionConstants'
 
 const woman = { sex: 'female' as const, weightKg: 70, heightCm: 165, age: 45, activity: 'moderate' as const }
 
@@ -55,14 +55,34 @@ describe('targetKcal', () => {
   it('superávit = TDEE × 1.10', () => {
     expect(targetKcal(2000, 'surplus', 'female')).toBe(2200)
   })
-  it('respeta el suelo femenino', () => {
-    expect(targetKcal(1300, 'deficit', 'female')).toBe(KCAL_FLOOR_FEMALE)
+  it('suelo universal de 1.200 kcal para mujeres, hombres y sexo desconocido', () => {
+    expect(KCAL_FLOOR).toBe(1200)
+    expect(targetKcal(1300, 'deficit', 'female')).toBe(1200)
+    expect(targetKcal(1300, 'deficit', 'male')).toBe(1200)
+    expect(targetKcal(1300, 'deficit', null)).toBe(1200)
   })
-  it('respeta el suelo masculino', () => {
-    expect(targetKcal(1700, 'deficit', 'male')).toBe(KCAL_FLOOR_MALE)
+  it('un hombre con objetivo de 1.445 ya no se sube a 1.500', () => {
+    expect(targetKcal(1700, 'deficit', 'male')).toBe(1445)
   })
-  it('sin sexo conocido usa el suelo más protector', () => {
-    expect(targetKcal(1300, 'deficit', null)).toBe(KCAL_FLOOR_MALE)
+  it('kcalFloor mantiene la firma y siempre devuelve 1.200', () => {
+    expect(kcalFloor('female')).toBe(1200)
+    expect(kcalFloor('male')).toBe(1200)
+    expect(kcalFloor()).toBe(1200)
+  })
+})
+
+describe('targetRaisedToFloor', () => {
+  it('true si el objetivo calculado quedaba por debajo de 1.200', () => {
+    expect(targetRaisedToFloor(1400, 'deficit')).toBe(true) // 1190
+    expect(computeEnergy({ sex: 'female', weightKg: 45, heightCm: 150, age: 70, activity: 'sedentary' }, 'deficit')).toMatchObject({
+      targetKcal: 1200, raisedToFloor: true,
+    })
+  })
+  it('justo en 1.200 no se considera ajustado', () => {
+    expect(targetRaisedToFloor(1200, 'maintenance')).toBe(false)
+  })
+  it('false con objetivos normales', () => {
+    expect(targetRaisedToFloor(2085, 'deficit')).toBe(false)
   })
 })
 

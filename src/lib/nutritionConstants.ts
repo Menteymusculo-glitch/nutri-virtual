@@ -1,11 +1,9 @@
 // Constantes de seguridad y reglas del tracker de calorías.
 // Un único sitio para que Ray las revise y ajuste.
 
-// TODO(Ray): confirmar los suelos calóricos. Valores habituales en la literatura
-// clínica para dietas sin supervisión médica (NIH/NHLBI 1998, "Clinical Guidelines
-// on the Identification, Evaluation, and Treatment of Overweight and Obesity").
-export const KCAL_FLOOR_FEMALE = 1200
-export const KCAL_FLOOR_MALE = 1500
+// Suelo calórico universal: nunca sugerimos ni fijamos un objetivo por debajo de
+// 1.200 kcal/día, sin distinguir sexo (decisión de producto de Ray).
+export const KCAL_FLOOR = 1200
 
 // Estado del día: desviación respecto al objetivo dentro de ±10% = "en tu zona".
 export const ZONE_TOLERANCE_PCT = 10
@@ -22,8 +20,8 @@ export const MAX_WEEKLY_ADJUSTMENT_PCT = 10
 
 export type Sex = 'female' | 'male'
 
-// Si no sabemos el sexo, usamos el suelo más alto (más protector).
-export function kcalFloor(sex: Sex | null | undefined): number {
-  if (sex === 'female') return KCAL_FLOOR_FEMALE
-  return KCAL_FLOOR_MALE
+// Se mantiene la firma (con sexo) por compatibilidad; el suelo es el mismo para todas.
+export function kcalFloor(sex?: Sex | null): number {
+  void sex
+  return KCAL_FLOOR
 }

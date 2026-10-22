@@ -1,6 +1,8 @@
 // Reporte diario y ajuste semanal. Solo números y estados: los textos viven en
 // src/lib/reportCopy.ts. Reglas de producto: sección 2 de PROMPT_TRACKER_CALORIAS.md.
+import type { Goal } from '@/lib/energy'
 import {
+  KCAL_FLOOR,
   kcalFloor,
   MAINTENANCE_TOLERANCE_PCT,
   MAX_WEEKLY_ADJUSTMENT_PCT,
@@ -31,6 +33,33 @@ export interface DayReport {
   balance: EnergyBalance | null
   closed: boolean
   progressPct: number | null // % del objetivo consumido (para la barra de progreso)
+  floorAlert: boolean // día cerrado con registros por debajo del suelo (seguridad)
+  ceilingAlert: CeilingAlert // día cerrado por encima del techo
+}
+
+// Techo:
+// - 'sobre_gasto': objetivo déficit y consumo por encima del TDEE (no hubo déficit).
+// - 'sobre_techo': mantenimiento/superávit y consumo por encima del objetivo +10%
+//   (coincide con 'por_encima'; la UI no repite el mensaje).
+export type CeilingAlert = 'sobre_gasto' | 'sobre_techo' | null
+
+// Alerta de suelo: hay consumo y queda por debajo del mínimo diario (1.200 justo no alerta).
+export function floorAlertFor(consumed: number): boolean {
+  return isFinite(consumed) && consumed > 0 && consumed < KCAL_FLOOR
+}
+
+export function ceilingAlertFor(
+  consumed: number,
+  target: number | null | undefined,
+  tdee: number | null | undefined,
+  goal: Goal | null | undefined,
+): CeilingAlert {
+  if (!isFinite(consumed) || consumed <= 0) return null
+  if (goal === 'deficit') return isPositive(tdee) && consumed > tdee ? 'sobre_gasto' : null
+  if (goal === 'maintenance' || goal === 'surplus') {
+    return isPositive(target) && ((consumed - target) / target) * 100 > ZONE_TOLERANCE_PCT + EPS ? 'sobre_techo' : null
+  }
+  return null
 }
 
 // Evita que errores de coma flotante saquen de la zona un ±10% exacto.
@@ -59,13 +88,14 @@ export function dayReport(p: {
   target: number | null | undefined
   tdee: number | null | undefined
   closed: boolean
+  goal?: Goal | null
 }): DayReport {
   const consumed = isFinite(p.consumed) && p.consumed > 0 ? Math.round(p.consumed) : 0
   const closed = p.closed
-  const empty = { deviationPct: null, onTarget: false, balance: null, closed }
+  const empty = { deviationPct: null, onTarget: false, balance: null, closed, floorAlert: false, ceilingAlert: null }
 
   if (!isPositive(p.target)) {
-    return { status: 'sin_objetivo', consumed, target: null, progressPct: null, ...empty }
+    return { status: 'sin_objetivo', consumed, target: null, progressPct: null, ...empty, floorAlert: closed && floorAlertFor(consumed) }
   }
   const target = Math.round(p.target)
   const progressPct = Math.round((consumed / target) * 100)
@@ -90,6 +120,8 @@ export function dayReport(p: {
     balance: energyBalance(consumed, p.tdee),
     closed,
     progressPct,
+    floorAlert: floorAlertFor(consumed),
+    ceilingAlert: ceilingAlertFor(consumed, target, p.tdee, p.goal),
   }
 }
 
@@ -124,6 +156,8 @@ export type WeekAdjustment =
       suggestedDaily: number // ingesta diaria sugerida para la próxima semana
       limitedByFloor: boolean // el suelo calórico obligó a subir la sugerencia
       balance: EnergyBalance | null
+      floorAlert: boolean // promedio por debajo del suelo
+      ceilingAlert: CeilingAlert // promedio por encima del techo
     }
 
 // Se calcula sobre el PROMEDIO de los días con registro de la ventana (no sobre un día suelto).
@@ -137,6 +171,7 @@ export function weekAdjustment(p: {
   sex: Sex | null | undefined
   today?: string
   closedDates?: Iterable<string>
+  goal?: Goal | null
 }): WeekAdjustment {
   const closedDates = [...(p.closedDates ?? [])]
   const eligible = p.today ? p.days.filter((d) => isDayClosed(d.date, p.today!, closedDates)) : p.days
@@ -155,6 +190,7 @@ export function weekAdjustment(p: {
   const rawPct = ((average - target) / target) * 100
   const deviationPct = Math.round(rawPct)
   const balance = energyBalance(average, p.tdee)
+  const alerts = { floorAlert: floorAlertFor(average), ceilingAlert: ceilingAlertFor(average, target, p.tdee, p.goal) }
   const cap = Math.round((target * MAX_WEEKLY_ADJUSTMENT_PCT) / 100)
 
   const status = statusFor(rawPct)
@@ -168,6 +204,7 @@ export function weekAdjustment(p: {
       suggestedDaily,
       limitedByFloor: suggestedDaily > average,
       balance,
+      ...alerts,
     }
   }
 
@@ -182,6 +219,7 @@ export function weekAdjustment(p: {
       suggestedDaily,
       limitedByFloor: suggestedDaily > suggested,
       balance,
+      ...alerts,
     }
   }
 
@@ -197,6 +235,7 @@ export function weekAdjustment(p: {
     suggestedDaily,
     limitedByFloor: suggestedDaily > suggested,
     balance,
+    ...alerts,
   }
 }
 

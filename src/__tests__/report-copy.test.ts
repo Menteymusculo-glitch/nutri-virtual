@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { COPY, FORBIDDEN_TERMS, dayCopy, weekCopy, deviationPhrase, balancePhrase, progressPhrase } from '@/lib/reportCopy'
+import {
+  COPY, FORBIDDEN_TERMS, SUPPORT_URL, dayCopy, weekCopy, deviationPhrase, balancePhrase, progressPhrase, alertsCopy,
+} from '@/lib/reportCopy'
 import { dayReport, weekAdjustment, type DayTotal } from '@/lib/calorieReport'
 
 // Los casos de estado (en_zona / por_debajo / por_encima) son de días cerrados.
@@ -25,6 +27,8 @@ const dayScenarios = [0, 900, 1500, 1800, 1990, 2000, 2080, 2200, 2500, 4000].fl
   closedDay({ consumed, target: null, tdee: null }),
   dayReport({ consumed, target: 2000, tdee: 2300, closed: false }),
   dayReport({ consumed, target: null, tdee: null, closed: false }),
+  dayReport({ consumed, target: 1500, tdee: 1800, closed: true, goal: 'deficit' }),
+  dayReport({ consumed, target: 2000, tdee: 2000, closed: true, goal: 'maintenance' }),
 ])
 
 const wk = (vals: number[]): DayTotal[] => vals.map((consumed, i) => ({ date: `2026-10-1${i}`, consumed }))
@@ -35,6 +39,8 @@ const weekScenarios = [
   weekAdjustment({ days: wk([1500, 1500, 1500]), target: 2000, tdee: 2300, sex: 'female' }),
   weekAdjustment({ days: wk([900, 900, 900]), target: 1300, tdee: 1500, sex: 'female' }),
   weekAdjustment({ days: wk([2000, 2000, 2000]), target: null, tdee: null, sex: null }),
+  weekAdjustment({ days: wk([1000, 1000, 1000]), target: 1500, tdee: 1800, sex: 'female', goal: 'deficit' }),
+  weekAdjustment({ days: wk([2400, 2400, 2400]), target: 1955, tdee: 2300, sex: 'female', goal: 'deficit' }),
 ]
 
 const allStrings = [
@@ -127,5 +133,74 @@ describe('reportCopy — día en curso', () => {
 
   it('progressPhrase sin objetivo', () => {
     expect(progressPhrase({ consumed: 500, target: null })).toBe('Llevas 500 kcal')
+  })
+})
+
+describe('reportCopy — alertas de suelo y techo', () => {
+  const closed = (consumed: number, goal: 'deficit' | 'maintenance' = 'deficit') =>
+    dayReport({ consumed, target: goal === 'deficit' ? 1500 : 2000, tdee: goal === 'deficit' ? 1800 : 2000, closed: true, goal })
+
+  it('día cerrado con 1.199: alerta de suelo con cifra y enlace a soporte', () => {
+    const [a] = dayCopy(closed(1199)).alerts
+    expect(a.kind).toBe('suelo')
+    expect(a.text).toMatch(/por debajo del mínimo diario recomendado \(1\.?200 kcal\)/)
+    expect(a.text).toMatch(/Tu cuerpo necesita energía para rendir y recuperarse/)
+    expect(a.linkLabel).toBe('Si quieres, hablemos')
+  })
+
+  it('justo 1.200: sin alerta de suelo', () => {
+    expect(dayCopy(closed(1200)).alerts).toEqual([])
+  })
+
+  it('día en curso: sin alertas aunque vaya por debajo de 1.200', () => {
+    const r = dayReport({ consumed: 500, target: 1500, tdee: 1800, closed: false, goal: 'deficit' })
+    expect(dayCopy(r).alerts).toEqual([])
+  })
+
+  it('modo oculto: la alerta de suelo SÍ aparece, sin cifras', () => {
+    const c = dayCopy(closed(900), { hideCalories: true })
+    expect(c.alerts.map((a) => a.kind)).toEqual(['suelo'])
+    expect(c.alerts[0].text).not.toMatch(/\d/)
+  })
+
+  it('techo con objetivo déficit: mensaje de "no hubo déficit"; en el TDEE exacto, nada', () => {
+    const over = dayCopy(closed(1801))
+    expect(over.alerts.map((a) => a.kind)).toEqual(['techo'])
+    expect(over.alerts[0].text).toBe(
+      'Hoy estuviste por encima de tu gasto estimado, así que no hubo déficit. Es información, no un juicio: lo que cuenta es la tendencia de la semana.',
+    )
+    expect(dayCopy(closed(1800)).alerts).toEqual([])
+  })
+
+  it('modo oculto: la alerta de techo no se muestra', () => {
+    expect(dayCopy(closed(2500), { hideCalories: true }).alerts).toEqual([])
+  })
+
+  it('mantenimiento: por encima del objetivo +10% no duplica el mensaje del estado', () => {
+    const c = dayCopy(closed(2500, 'maintenance'))
+    expect(c.label).toBe('Por encima de tu objetivo')
+    expect(c.alerts).toEqual([])
+  })
+
+  it('semana: alerta de suelo con el promedio, sin repetir la nota de mínimo', () => {
+    const w = weekAdjustment({ days: wk([1000, 1000, 1000]), target: 1500, tdee: 1800, sex: 'female', goal: 'deficit' })
+    const c = weekCopy(w)
+    expect(c.alerts.map((a) => a.kind)).toEqual(['suelo'])
+    expect(c.alerts[0].text).toMatch(/^Tu promedio de la semana está por debajo/)
+    expect(c.detail.join(' ')).not.toMatch(/mínimo diario recomendado/)
+  })
+
+  it('semana: techo con objetivo déficit', () => {
+    const w = weekAdjustment({ days: wk([2400, 2400, 2400]), target: 1955, tdee: 2300, sex: 'female', goal: 'deficit' })
+    expect(weekCopy(w).alerts.map((a) => a.kind)).toEqual(['techo'])
+  })
+
+  it('alertsCopy sin alertas → lista vacía', () => {
+    expect(alertsCopy({ floorAlert: false, ceilingAlert: null }, 'dia')).toEqual([])
+  })
+
+  it('la nota de objetivo ajustado y el soporte usan el nuevo correo', () => {
+    expect(COPY.targetFloorNote).toBe('Tu objetivo se ajustó al mínimo diario recomendado. Si quieres revisarlo, escribe a soporte.')
+    expect(SUPPORT_URL).toMatch(/^mailto:soporte@menteymusculo\.com/)
   })
 })

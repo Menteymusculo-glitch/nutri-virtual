@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
     days,
     adjustment: weekAdjustment({
       days, target: target?.target_kcal, tdee: target?.tdee_kcal, sex: target?.sex,
-      today, closedDates: closedToday,
+      today, closedDates: closedToday, goal: target?.goal,
     }),
   })
 }

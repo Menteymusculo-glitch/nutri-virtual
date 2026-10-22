@@ -74,6 +74,7 @@ beforeEach(() => {
   vi.useFakeTimers()
   vi.setSystemTime(new Date(Date.UTC(2026, 9, 22, 12)))
   state.user = { id: 'user-1' }
+  state.target = { user_id: 'user-1', goal: 'maintenance', target_kcal: 2000, tdee_kcal: 2300, sex: 'female', hide_calories: false, updated_at: null }
   state.logs = [
     { log_date: '2026-10-19', total_kcal: 2000 },
     { log_date: '2026-10-20', total_kcal: 2000 },
@@ -136,6 +137,23 @@ describe('GET /api/tracker/day', () => {
     const body = await (await getDay(req(`http://x/api/tracker/day?date=2026-10-21&today=${TODAY}`))).json()
     expect(body.closed).toBe(true)
     expect(body.report.status).toBe('en_zona')
+  })
+})
+
+describe('GET /api/tracker/day — alertas', () => {
+  it('día anterior bajo 1.200 → floorAlert; hoy abierto con poco → sin alerta', async () => {
+    state.logs.push({ log_date: '2026-10-18', total_kcal: 900 })
+    const past = await (await getDay(req(`http://x/api/tracker/day?date=2026-10-18&today=${TODAY}`))).json()
+    expect(past.report.floorAlert).toBe(true)
+    const now = await (await getDay(req(`http://x/api/tracker/day?date=${TODAY}&today=${TODAY}`))).json()
+    expect(now.report.floorAlert).toBe(false)
+  })
+
+  it('pasa el objetivo de la usuaria: déficit por encima del TDEE → sobre_gasto', async () => {
+    state.target = { ...state.target, goal: 'deficit', target_kcal: 1955, tdee_kcal: 2300 }
+    state.logs.push({ log_date: '2026-10-17', total_kcal: 2400 })
+    const body = await (await getDay(req(`http://x/api/tracker/day?date=2026-10-17&today=${TODAY}`))).json()
+    expect(body.report.ceilingAlert).toBe('sobre_gasto')
   })
 })
 

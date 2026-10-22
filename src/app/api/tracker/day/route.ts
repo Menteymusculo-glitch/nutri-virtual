@@ -53,6 +53,6 @@ export async function GET(req: NextRequest) {
     target,
     meals: list,
     totals,
-    report: dayReport({ consumed: totals.kcal, target: target?.target_kcal, tdee: target?.tdee_kcal, closed }),
+    report: dayReport({ consumed: totals.kcal, target: target?.target_kcal, tdee: target?.tdee_kcal, closed, goal: target?.goal }),
   })
 }
