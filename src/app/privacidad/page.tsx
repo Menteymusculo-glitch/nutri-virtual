@@ -1,3 +1,5 @@
+// BORRADOR: texto pendiente de revisión por un asesor legal antes de darlo por definitivo
+// (en especial la sección 3.4, fotos de comida, añadida en la Fase 2 del tracker).
 export const metadata = {
   title: 'Política de Privacidad | Mente y Músculo',
   description: 'Cómo recopilamos, usamos y protegemos tus datos personales en la plataforma Mente y Músculo.',
@@ -95,14 +97,35 @@ export default function PrivacidadPage() {
         onboarding. Sin ese consentimiento, el formulario no puede completarse.
       </p>
 
+      <h3 id="fotos" style={h3}>3.4 Registro diario: fotos de comida</h3>
+      <p>
+        En el registro diario puedes usar <em>«Foto de mi plato»</em> para que la app te proponga qué
+        alimentos ve y una cantidad aproximada. Tú revisas, corriges y confirmas antes de que se guarde
+        nada; las calorías se calculan siempre con nuestra base de alimentos, no con lo que diga la IA.
+      </p>
+      <ul style={ul}>
+        <li><strong>Finalidad:</strong> identificar los alimentos del plato para facilitarte el registro. No usamos tus fotos para ningún otro fin.</li>
+        <li><strong>Envío a Groq (EE. UU.):</strong> la foto se envía a Groq, un servicio de inteligencia artificial con servidores en EE. UU., solo para analizarla. Antes de enviarla, la app la reduce de tamaño y le quita los metadatos (incluida la ubicación).</li>
+        <li><strong>Almacenamiento:</strong> la foto se guarda en tu cuenta en Supabase (servidores en la UE), en un espacio privado sin acceso público. Solo tú puedes verla, mediante enlaces temporales que caducan en 60 segundos.</li>
+        <li><strong>Conservación:</strong> 30 días. Pasado ese plazo se borra automáticamente; la comida registrada se mantiene sin la foto.</li>
+        <li><strong>Borrado a petición:</strong> puedes borrar cualquier foto cuando quieras desde la comida correspondiente. Si cancelas el registro, la foto se borra en ese momento. Al eliminar tu cuenta se borran todas tus fotos.</li>
+        <li><strong>Límites de uso:</strong> para controlar el coste del servicio guardamos un registro de cada análisis, sin la foto y con tu identificador y tu IP cifrados (hash), que sirve para contar los análisis de las últimas 24 horas.</li>
+      </ul>
+      <p>
+        <strong>Base jurídica:</strong> consentimiento explícito, que se te pide la primera vez que usas
+        la función y que queda registrado con su fecha y versión. Sin ese consentimiento no se sube
+        ninguna foto. Puedes retirarlo en cualquier momento en <em>Registro diario → Ajustes</em>; el
+        registro manual de comidas sigue funcionando igual.
+      </p>
+
       {/* ─── SECCIÓN 4 ─── */}
       <h2 id="compartir" style={h2}>4. Compartición con terceros</h2>
       <p>Solo compartimos datos con terceros en los siguientes supuestos:</p>
       <ul style={ul}>
         <li><strong>Stripe:</strong> procesamiento de pagos. Sujeto a su propia política de privacidad.</li>
         <li><strong>GoHighLevel / DAX Engine:</strong> CRM y automatización de comunicaciones. Almacena tu nombre, correo y teléfono para gestionar el acceso y enviarte comunicaciones si has dado consentimiento.</li>
-        <li><strong>Groq (LLM):</strong> los datos de salud y personales que introduces en las herramientas de IA se procesan en su infraestructura. Groq declara no usar los datos de las llamadas API para entrenar modelos.</li>
-        <li><strong>Supabase:</strong> base de datos en la nube (servidores en la UE) donde se almacenan tus datos de cuenta, planes y diagnósticos.</li>
+        <li><strong>Groq (LLM):</strong> los datos de salud y personales que introduces en las herramientas de IA, y las fotos de comida si usas esa función (sección 3.4), se procesan en su infraestructura en EE. UU. Groq declara no usar los datos de las llamadas API para entrenar modelos.</li>
+        <li><strong>Supabase:</strong> base de datos y almacenamiento en la nube (servidores en la UE) donde se guardan tus datos de cuenta, planes, diagnósticos, registro diario y, durante 30 días, tus fotos de comida.</li>
         <li><strong>Vercel:</strong> infraestructura de hosting de la plataforma web.</li>
       </ul>
       <p>No vendemos ni cedemos tus datos a terceros para fines publicitarios.</p>
@@ -113,6 +136,7 @@ export default function PrivacidadPage() {
         <li>Datos de cuenta: mientras la cuenta esté activa + 2 años tras la baja.</li>
         <li>Planes nutricionales y diagnósticos: 2 años desde su generación.</li>
         <li>Historial de onboarding: hasta que lo solicites eliminar o 2 años desde la última actividad.</li>
+        <li>Fotos de comida: 30 días desde que se suben (o hasta que las borres, si es antes).</li>
         <li>Leads (calculadora, quiz): 1 año desde la captación.</li>
         <li>Datos de facturación: según obligaciones legales (mínimo 5 años).</li>
       </ul>
@@ -134,7 +158,7 @@ export default function PrivacidadPage() {
         <li><strong>Rectificación:</strong> corregir datos incorrectos.</li>
         <li><strong>Supresión:</strong> solicitar la eliminación de tu cuenta y datos asociados.</li>
         <li><strong>Portabilidad:</strong> recibir tus datos en formato exportable.</li>
-        <li><strong>Retirada del consentimiento:</strong> puedes retirar tu consentimiento para comunicaciones comerciales en cualquier momento (enlace de baja en cada correo).</li>
+        <li><strong>Retirada del consentimiento:</strong> puedes retirar tu consentimiento para comunicaciones comerciales en cualquier momento (enlace de baja en cada correo), y el de análisis de fotos de comida desde <em>Registro diario → Ajustes</em>.</li>
       </ul>
       <p>
         Para ejercer cualquiera de estos derechos escribe a{' '}
