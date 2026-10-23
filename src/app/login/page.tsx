@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabaseBrowser } from '@/lib/supabase-browser'
 import { recoveryRedirect } from '@/lib/authRedirect'
+import { loginErrorMessage, forgotErrorMessage } from '@/lib/authErrors'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -29,13 +30,13 @@ export default function LoginPage() {
         password,
       })
       if (authError) {
-        setError('Correo o contraseña incorrectos.')
+        setError(loginErrorMessage(authError))
         return
       }
       router.push('/')
       router.refresh()
     } catch {
-      setError('Error de conexión. Intenta de nuevo.')
+      setError(loginErrorMessage({ name: 'AuthRetryableFetchError' }))
     } finally {
       setLoading(false)
     }
@@ -52,7 +53,7 @@ export default function LoginPage() {
         { redirectTo: recoveryRedirect(window.location.origin) }
       )
       if (resetError) {
-        setForgotMsg({ text: 'Error al enviar el correo. Intenta de nuevo.', ok: false })
+        setForgotMsg({ text: forgotErrorMessage(resetError), ok: false })
         return
       }
       setForgotMsg({
@@ -60,7 +61,7 @@ export default function LoginPage() {
         ok: true,
       })
     } catch {
-      setForgotMsg({ text: 'Error de conexión. Intenta de nuevo.', ok: false })
+      setForgotMsg({ text: forgotErrorMessage({ name: 'AuthRetryableFetchError' }), ok: false })
     } finally {
       setForgotLoading(false)
     }

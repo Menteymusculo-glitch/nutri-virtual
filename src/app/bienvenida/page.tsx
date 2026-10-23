@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabaseBrowser } from '@/lib/supabase-browser'
 import { parseEmailLink } from '@/lib/authRedirect'
+import { passwordErrorMessage, validateNewPassword, MIN_PASSWORD_LENGTH } from '@/lib/authErrors'
 
 // Destino del correo de invitación (Stripe y DAX). La plantilla "Invite user" de
 // Supabase enlaza aquí con ?token_hash=…&type=invite; se verifica con verifyOtp,
@@ -36,19 +37,19 @@ export default function BienvenidaPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (password !== confirm) { setError('Las contraseñas no coinciden.'); return }
-    if (password.length < 8) { setError('La contraseña debe tener al menos 8 caracteres.'); return }
+    const invalid = validateNewPassword(password, confirm)
+    if (invalid) { setError(invalid); return }
     setLoading(true)
     setError('')
     try {
       const { error: updateError } = await supabaseBrowser.auth.updateUser({ password })
       if (updateError) {
-        setError('No se pudo guardar la contraseña. Inténtalo de nuevo.')
+        setError(passwordErrorMessage(updateError))
         return
       }
       goHome()
     } catch {
-      setError('Error de conexión. Intenta de nuevo.')
+      setError(passwordErrorMessage(null))
     } finally {
       setLoading(false)
     }
@@ -98,13 +99,13 @@ export default function BienvenidaPage() {
               <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div>
                   <label style={labelStyle}>Contraseña</label>
-                  <input className="input-field" type="password" placeholder="Mínimo 8 caracteres" value={password}
-                    onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" required minLength={8} />
+                  <input className="input-field" type="password" placeholder={`Mínimo ${MIN_PASSWORD_LENGTH} caracteres`} value={password}
+                    onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" required minLength={MIN_PASSWORD_LENGTH} />
                 </div>
                 <div>
                   <label style={labelStyle}>Confirmar contraseña</label>
                   <input className="input-field" type="password" placeholder="Repite la contraseña" value={confirm}
-                    onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" required minLength={8} />
+                    onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" required minLength={MIN_PASSWORD_LENGTH} />
                 </div>
 
                 {error && (
