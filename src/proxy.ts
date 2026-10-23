@@ -35,6 +35,12 @@ export async function proxy(request: NextRequest) {
     return response
   }
 
+  // Invitaciones (Stripe/DAX): la alumna aún no tiene sesión; la página verifica
+  // el token_hash con verifyOtp y la inicia.
+  if (pathname === '/bienvenida') {
+    return response
+  }
+
   // /nutrivirtual → alias for the nutrition tool landing (moved off '/' when
   // '/' became the public marketing homepage)
   if (pathname === '/nutrivirtual') {

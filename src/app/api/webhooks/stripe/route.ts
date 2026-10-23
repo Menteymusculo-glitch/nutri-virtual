@@ -2,6 +2,7 @@ import Stripe from 'stripe'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/auth-server'
 import { findOrCreateUser } from '@/lib/users'
+import { appUrl, INVITE_PATH } from '@/lib/authRedirect'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
@@ -14,9 +15,6 @@ const PRICE_PLAN_MAP: Record<string, { plan: string; durationDays: number | null
   // TEMP — solo para prueba de integración, eliminar antes del deploy final
   'price_1TxtIuBb2DLBnuHzi22kwiIr': { plan: 'test_temp',        durationDays: 1,   recurring: false },
 }
-
-// Stripe invites land on /login (legacy flow)
-const STRIPE_INVITE_REDIRECT = 'https://nutri-virtual.vercel.app/login'
 
 async function upsertAccess(params: {
   userId: string
@@ -119,7 +117,7 @@ export async function POST(req: NextRequest) {
         }
 
         const { plan, durationDays } = PRICE_PLAN_MAP[priceId]
-        const userId = await findOrCreateUser(email, STRIPE_INVITE_REDIRECT)
+        const userId = await findOrCreateUser(email, appUrl(INVITE_PATH))
         await upsertAccess({ userId, email, plan, stripeCustomerId: customerId, stripePriceId: priceId, durationDays })
         console.log(`[stripe-webhook] checkout.session.completed → ${email} plan=${plan}`)
         break

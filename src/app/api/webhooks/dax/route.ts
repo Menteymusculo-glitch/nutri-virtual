@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/auth-server'
 import { findOrCreateUser, findUserIdByEmail } from '@/lib/users'
+import { appUrl, INVITE_PATH } from '@/lib/authRedirect'
 import { computeEffectivePlan, determineAccessAction, PLAN_RANK } from '@/lib/dax-logic'
 
 // DAX product slug → internal plan name (add new products here only)
@@ -9,12 +10,6 @@ const DAX_PLAN_MAP: Record<string, string> = {
   premium:          'premium',
   gym_virtual_core: 'gym_virtual_core',
   nutri_app:        'nutri_app',
-}
-
-function inviteRedirect(): string {
-  return process.env.NEXT_PUBLIC_APP_URL
-    ? `${process.env.NEXT_PUBLIC_APP_URL}/nutrivirtual`
-    : 'https://herramientas.menteymusculo.com/nutrivirtual'
 }
 
 async function getActiveDaxPlans(userId: string): Promise<string[]> {
@@ -107,7 +102,7 @@ export async function POST(req: NextRequest) {
 
   try {
     if (type === 'subscription_created') {
-      const userId = await findOrCreateUser(normalizedEmail, inviteRedirect())
+      const userId = await findOrCreateUser(normalizedEmail, appUrl(INVITE_PATH))
 
       // Upsert in dax_subscriptions — email is already lowercased, so (email,plan)
       // uniqueness is guaranteed even when user_id is NULL (ON DELETE SET NULL).

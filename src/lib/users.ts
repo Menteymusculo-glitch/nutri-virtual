@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/auth-server'
+import { appUrl, INVITE_PATH } from '@/lib/authRedirect'
 
 // Supabase admin API (auth-js 2.110) has no direct lookup by email, and
 // listUsers is paginated. Looking only at the first page creates duplicates
@@ -6,8 +7,6 @@ import { supabaseAdmin } from '@/lib/auth-server'
 const PAGE_SIZE = 1000
 // Hard stop so a misbehaving API can never loop forever (1M users).
 const MAX_PAGES = 1000
-
-const DEFAULT_REDIRECT = 'https://herramientas.menteymusculo.com/nutrivirtual'
 
 function normalize(email: string): string {
   return email.toLowerCase().trim()
@@ -47,7 +46,7 @@ export async function findUserIdByEmail(email: string): Promise<string | null> {
 
 // Returns the existing user id or invites a new user (creates the auth account
 // and sends the magic link).
-export async function findOrCreateUser(email: string, redirectTo = DEFAULT_REDIRECT): Promise<string> {
+export async function findOrCreateUser(email: string, redirectTo = appUrl(INVITE_PATH)): Promise<string> {
   const target = normalize(email)
   const existing = await findUserIdByEmail(target)
   if (existing) return existing
