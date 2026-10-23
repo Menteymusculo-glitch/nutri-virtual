@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/auth-server'
+import { isCronAuthorized } from '@/lib/cronAuth'
 
 // TODO: replace with real email provider (Resend / SendGrid) when decided
 async function sendExpirationWarning(user: { email: string; plan: string; expiresAt: Date }) {
@@ -8,8 +9,7 @@ async function sendExpirationWarning(user: { email: string; plan: string; expire
 
 export async function GET(req: NextRequest) {
   // Vercel Cron automatically sends Authorization: Bearer CRON_SECRET
-  const authHeader = req.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isCronAuthorized(req.headers.get('authorization'))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
