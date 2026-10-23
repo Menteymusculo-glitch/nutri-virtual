@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabaseBrowser } from '@/lib/supabase-browser'
 import { parseRecoveryLink } from '@/lib/authRedirect'
+import { passwordErrorMessage, validateNewPassword, MIN_PASSWORD_LENGTH } from '@/lib/authErrors'
 
 export default function ResetPasswordPage() {
   const router = useRouter()
@@ -55,12 +56,9 @@ export default function ResetPasswordPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (password !== confirm) {
-      setError('Las contraseñas no coinciden.')
-      return
-    }
-    if (password.length < 8) {
-      setError('La contraseña debe tener al menos 8 caracteres.')
+    const invalid = validateNewPassword(password, confirm)
+    if (invalid) {
+      setError(invalid)
       return
     }
     setLoading(true)
@@ -68,14 +66,14 @@ export default function ResetPasswordPage() {
     try {
       const { error: updateError } = await supabaseBrowser.auth.updateUser({ password })
       if (updateError) {
-        setError('No se pudo actualizar la contraseña. El link puede haber expirado.')
+        setError(passwordErrorMessage(updateError))
         return
       }
       await supabaseBrowser.auth.signOut()
       setSuccess(true)
       setTimeout(() => router.push('/login'), 3000)
     } catch {
-      setError('Error de conexión. Intenta de nuevo.')
+      setError(passwordErrorMessage(null))
     } finally {
       setLoading(false)
     }
@@ -132,7 +130,7 @@ export default function ResetPasswordPage() {
                   Nueva contraseña
                 </h2>
                 <p style={{ fontSize: '0.875rem', color: '#888', lineHeight: 1.5 }}>
-                  Elige una contraseña segura de al menos 8 caracteres
+                  Elige una contraseña segura de al menos {MIN_PASSWORD_LENGTH} caracteres
                 </p>
               </div>
 
@@ -144,12 +142,12 @@ export default function ResetPasswordPage() {
                   <input
                     className="input-field"
                     type="password"
-                    placeholder="Mínimo 8 caracteres"
+                    placeholder={`Mínimo ${MIN_PASSWORD_LENGTH} caracteres`}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     autoComplete="new-password"
                     required
-                    minLength={8}
+                    minLength={MIN_PASSWORD_LENGTH}
                   />
                 </div>
 
@@ -165,7 +163,7 @@ export default function ResetPasswordPage() {
                     onChange={(e) => setConfirm(e.target.value)}
                     autoComplete="new-password"
                     required
-                    minLength={8}
+                    minLength={MIN_PASSWORD_LENGTH}
                   />
                 </div>
 
