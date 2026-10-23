@@ -296,3 +296,23 @@ describe('dax webhook — integración', () => {
     spy.mockRestore()
   })
 })
+
+describe('dax webhook — invitación', () => {
+  beforeEach(() => {
+    mockDB.processedEvents.clear()
+    mockDB.subscriptions = []
+    mockDB.accessRow = null
+    mockDB.authUsers = []
+    mockDB.nextInviteId = 'invited-user-1'
+    mockInviteUser.mockClear()
+  })
+
+  it('una alumna nueva recibe la invitación con destino /bienvenida', async () => {
+    const res = await POST(makeReq({ ...BASE, event_id: 'evt-invite', email: 'nueva@example.com' }) as any)
+    expect(res.status).toBe(200)
+    expect(mockInviteUser).toHaveBeenCalledTimes(1)
+    const [, opts] = mockInviteUser.mock.calls[0] as unknown as [string, { redirectTo: string }]
+    expect(opts.redirectTo).toMatch(/\/bienvenida$/)
+    expect(opts.redirectTo).not.toContain('vercel.app')
+  })
+})

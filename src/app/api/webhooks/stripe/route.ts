@@ -1,6 +1,7 @@
 import Stripe from 'stripe'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/auth-server'
+import { appUrl, INVITE_PATH } from '@/lib/authRedirect'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
@@ -21,7 +22,7 @@ async function findOrCreateUser(email: string): Promise<string> {
 
   // User doesn't exist yet — invite them (creates auth account + sends magic link)
   const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-    redirectTo: 'https://nutri-virtual.vercel.app/login',
+    redirectTo: appUrl(INVITE_PATH),
   })
   if (error || !data.user) throw new Error(`inviteUserByEmail failed: ${error?.message}`)
   return data.user.id
