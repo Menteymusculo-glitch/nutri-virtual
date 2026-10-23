@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/auth-server'
 import { removePhotos } from '@/lib/mealPhotos'
+import { isCronAuthorized } from '@/lib/cronAuth'
 import { PHOTO_RETENTION_DAYS } from '@/lib/nutritionConstants'
 
 export const maxDuration = 60
@@ -12,8 +13,7 @@ const MAX_BATCHES = 20
 // analizaron y nunca se guardaron) y pone photo_path a NULL en sus comidas.
 // Solo registra recuentos, nunca rutas ni datos de la usuaria.
 export async function GET(req: NextRequest) {
-  const secret = process.env.CRON_SECRET
-  if (!secret || req.headers.get('authorization') !== `Bearer ${secret}`) {
+  if (!isCronAuthorized(req.headers.get('authorization'))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

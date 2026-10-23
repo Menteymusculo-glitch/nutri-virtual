@@ -87,13 +87,18 @@ describe('GET /api/cron/purge-photos', () => {
     state.cleared = []
     state.rpcCalls = 0
   })
-  afterEach(() => { process.env.CRON_SECRET = env })
+  afterEach(() => {
+    if (env === undefined) delete process.env.CRON_SECRET
+    else process.env.CRON_SECRET = env
+  })
 
   it('401 sin el secreto, y también si CRON_SECRET no está configurado', async () => {
     expect((await call()).status).toBe(401)
     expect((await call('Bearer otro')).status).toBe(401)
     delete process.env.CRON_SECRET
     expect((await call('Bearer undefined')).status).toBe(401)
+    process.env.CRON_SECRET = '   '
+    expect((await call('Bearer    ')).status).toBe(401)
   })
 
   it('borra las fotos antiguas del Storage y limpia photo_path; solo registra recuentos', async () => {
