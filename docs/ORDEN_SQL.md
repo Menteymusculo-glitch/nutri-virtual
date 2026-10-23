@@ -26,11 +26,13 @@ Al final de cada archivo hay consultas de verificación (comentadas).
 | 6 | `sql/phase-tracker-day-close.sql` | `feat/tracker-calorias` | **Desplegar `feat/tracker-calorias`** (tabla `day_closures`; sin ella fallan `/api/tracker/day`, `/week` y "Cerrar mi día") | #4 (por orden lógico; técnicamente solo necesita `auth.users`) |
 | 7 | `sql/phase-foods-intl.sql` | `feat/tracker-calorias` | **Desplegar `feat/tracker-calorias`** (columnas nuevas en `foods`, tabla `food_portions` y función `search_foods`; sin ella el buscador responde 500) | #4 |
 | 8 | `sql/phase-foods-intl-seed.sql` | `feat/tracker-calorias` | **Desplegar `feat/tracker-calorias`** (349 alimentos y 387 porciones; sustituye al seed #5) | #7 |
+| 9 | `sql/phase-photos.sql` | `feat/tracker-calorias` | **Desplegar la Fase 2 (fotos)**: tabla `photo_consents`, bucket privado `meal-photos` y función `old_meal_photos` para el cron. Sin ella, "Foto de mi plato" responde error y el cron de purga falla; el registro manual sigue funcionando | #4 y `phase-rate-limits.sql` (ya ejecutada) |
 
 ### Antes de cada despliegue
 
 - **Antes de desplegar `hotfix/save-routes`:** #1 y #2.
 - **Antes de desplegar `feat/tracker-calorias`:** #3, #4, #5, #6, #7 y #8 (#1 y #2 ya están ejecutadas).
+- **Antes de desplegar la Fase 2 (fotos), también en `feat/tracker-calorias`:** #9, más el bucket (ver nota de #9) y `CRON_SECRET` en Preview si quieres probar el cron allí.
 
 ### Notas por archivo
 
@@ -40,6 +42,7 @@ Al final de cada archivo hay consultas de verificación (comentadas).
 - **#5 `phase-tracker-seed.sql`:** 168 alimentos; 36 marcados `APROX`/`REVISAR` para revisión. Volver a ejecutarla actualiza los valores de los alimentos `seed`. **Queda sustituido por #8**: si se ejecutan #7 y #8 se puede saltar #5 (y si ya se ejecutó, #8 renombra o fusiona sus filas sin perder las comidas registradas). Si alguna vez se vuelve a ejecutar #5 después de #8, hay que volver a ejecutar #8.
 - **#7 `phase-foods-intl.sql`:** intenta activar `pg_trgm` (búsqueda tolerante a erratas). Si no se puede, la búsqueda sigue funcionando sin esa tolerancia.
 - **#8 `phase-foods-intl-seed.sql`:** generado por `scripts/import-usda.mjs` (no editar a mano). Es una transacción: o se aplica entero o no se aplica nada. Al final hay consultas de verificación con los recuentos esperados.
+- **#9 `phase-photos.sql`:** crea el bucket `meal-photos` con un `INSERT` en `storage.buckets`. Si el SQL Editor no te deja (error de permisos en `storage`), créalo a mano: **Storage → New bucket** → nombre `meal-photos`, **Public bucket desactivado**, *Restrict file size* 3 MB, *Allowed MIME types* `image/jpeg`. No añadas ninguna política en **Storage → Policies** para ese bucket: el servidor usa el service role y el navegador nunca accede directamente. Después vuelve a ejecutar el archivo entero (el resto no depende del bucket). Al final hay consultas de verificación: la de políticas de `storage.objects` debe devolver 0 filas.
 
 ## ¿PROMPT_02 (cerrar el día) añadió alguna migración?
 
