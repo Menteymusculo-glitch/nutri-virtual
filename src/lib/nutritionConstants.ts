@@ -25,3 +25,15 @@ export function kcalFloor(sex?: Sex | null): number {
   void sex
   return KCAL_FLOOR
 }
+
+// ── Fotos de comida (Fase 2) ─────────────────────────────────────────────────
+// Análisis de foto por usuaria en las últimas 24 h. Cuentan los intentos de
+// análisis (aunque no se guarde la comida), no solo los guardados.
+export const PHOTO_DAILY_QUOTA_NUTRI_APP = 5
+export const PHOTO_DAILY_QUOTA_DEFAULT = 15
+// Tope por IP en 24 h, además del de cada usuaria: si una cuenta se ve
+// comprometida o se comparten credenciales, no se dispara el gasto.
+export const PHOTO_IP_DAILY_MAX = 40
+export const PHOTO_QUOTA_WINDOW_MS = 24 * 60 * 60 * 1000
+// Las fotos se borran a los 30 días (cron /api/cron/purge-photos).
+export const PHOTO_RETENTION_DAYS = 30
