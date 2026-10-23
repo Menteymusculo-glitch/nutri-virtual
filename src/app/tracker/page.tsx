@@ -1,12 +1,14 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import type { DayReport, WeekAdjustment, DayTotal } from '@/lib/calorieReport'
 import { COPY, SUPPORT_URL, dayCopy, weekCopy, fmtKcal, type AlertCopy } from '@/lib/reportCopy'
 import { gramsForPortion, kcalFor, sumNutrients } from '@/lib/mealMath'
 import { PREP_LABELS } from '@/lib/foodSearch'
 import { createSearchCache } from '@/lib/searchCache'
+import { compressPhoto, validateImageFile, PHOTO_FILE_ERRORS } from '@/lib/photoFile'
+import { PHOTO_CONSENT, PHOTO_CONSENT_VERSION, PHOTO_MESSAGES, PHOTO_UI } from '@/lib/photoCopy'
 import { targetRaisedToFloor, type ActivityLevel, type Goal } from '@/lib/energy'
 
 // ── Tipos de las respuestas de la API ────────────────────────────────────────
@@ -18,7 +20,7 @@ interface Target {
   hide_calories: boolean
 }
 interface MealItem { id: string; name: string; grams: number; kcal: number }
-interface Meal { id: string; meal_type: string | null; total_kcal: number; meal_items: MealItem[] }
+interface Meal { id: string; meal_type: string | null; total_kcal: number; has_photo?: boolean; meal_items: MealItem[] }
 interface DayData { date: string; today: string; closed: boolean; target: Target | null; meals: Meal[]; report: DayReport }
 interface WeekData { days: DayTotal[]; adjustment: WeekAdjustment }
 interface Portion { label: string; grams: number }
@@ -26,8 +28,16 @@ interface Food {
   id: string; name: string; kcal_100g: number; protein_100g: number | null; carbs_100g: number | null; fat_100g: number | null
   prep_state: string | null; quality: string; portions: Portion[]
 }
+type Confidence = 'alta' | 'media' | 'baja'
 // portion = -1 → la cantidad está en gramos; si no, es el índice de food.portions.
-interface DraftItem { food: Food; amount: string; portion: number }
+// seenAs y confidence solo existen si el alimento vino de la foto.
+interface DraftItem { food: Food; amount: string; portion: number; seenAs?: string; confidence?: Confidence }
+// Propuesta de /api/meals/photo. food = null → no se encontró en la base de alimentos.
+interface PhotoProposal {
+  photo_path: string; no_food: boolean; low_confidence: boolean
+  items: { name: string; grams: number; prep: string; confidence: Confidence; food: Food | null }[]
+}
+interface PendingItem { name: string; grams: number; confidence: Confidence }
 interface ProfileForm { sex: '' | 'female' | 'male'; age: string; weightKg: string; heightCm: string; activity: ActivityLevel; bodyFatPct: string; goal: Goal }
 
 const GRADIENT = 'linear-gradient(135deg,#FFD700,#FFA500,#FF6347,#DC143C)'
@@ -264,6 +274,7 @@ export default function TrackerPage() {
                     {!hide && <span>{Math.round(Number(i.kcal))} kcal</span>}
                   </div>
                 ))}
+                {m.has_photo && <MealPhoto mealId={m.id} onDeleted={reloadDay} onError={setError} />}
               </div>
             ))}
           </div>
@@ -382,6 +393,27 @@ function AddMeal({ date, hide, onCancel, onSaved }: { date: string; hide: boolea
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
+  // Foto del plato: consentimiento, foto subida, propuesta pendiente de revisar.
+  const fileRef = useRef<HTMLInputElement>(null)
+  const searchRef = useRef<HTMLInputElement>(null)
+  const [consent, setConsent] = useState<boolean | null>(null)
+  const [askConsent, setAskConsent] = useState(false)
+  const [photo, setPhoto] = useState<{ path: string; preview: string } | null>(null)
+  const [analyzing, setAnalyzing] = useState(false)
+  const [photoNote, setPhotoNote] = useState('')
+  const [pending, setPending] = useState<PendingItem[]>([])
+  const [replacing, setReplacing] = useState<number | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    api<{ consented: boolean }>('/api/tracker/photo-consent').then((r) => {
+      if (!cancelled) setConsent(r.ok ? r.data.consented : false)
+    })
+    return () => { cancelled = true }
+  }, [])
+  // Libera la vista previa local al cambiar de foto o al cerrar.
+  useEffect(() => () => { if (photo) URL.revokeObjectURL(photo.preview) }, [photo])
+
   const query = q.trim()
   const visibleResults = query.length >= 2 ? results : []
 
@@ -414,6 +446,91 @@ function AddMeal({ date, hide, onCancel, onSaved }: { date: string; hide: boolea
     [items],
   )
 
+  const discardPhoto = (path: string) =>
+    api('/api/meals/photo', { method: 'DELETE', body: JSON.stringify({ photo_path: path }) })
+
+  const startPhoto = () => {
+    setError('')
+    if (consent) fileRef.current?.click()
+    else setAskConsent(true)
+  }
+
+  const acceptConsent = async () => {
+    const r = await api('/api/tracker/photo-consent', { method: 'POST', body: JSON.stringify({ version: PHOTO_CONSENT_VERSION }) })
+    if (!r.ok) { setError(r.error); return }
+    setConsent(true)
+    setAskConsent(false)
+    fileRef.current?.click()
+  }
+
+  const onPhotoChosen = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setError('')
+    const invalid = validateImageFile(file)
+    if (invalid) { setError(invalid); return }
+    let blob: Blob
+    try {
+      blob = await compressPhoto(file)
+    } catch {
+      setError(PHOTO_FILE_ERRORS.unreadable)
+      return
+    }
+    setAnalyzing(true)
+    setPhotoNote('')
+    if (photo) {
+      // Otra foto: se descarta la anterior y lo que propuso (lo añadido a mano se queda).
+      await discardPhoto(photo.path)
+      setPhoto(null)
+      setItems((xs) => xs.filter((x) => !x.seenAs))
+      setPending([])
+    }
+    const r = await api<PhotoProposal>('/api/meals/photo', { method: 'POST', body: blob, headers: { 'content-type': 'image/jpeg' } })
+    setAnalyzing(false)
+    if (!r.ok) {
+      if (r.error === PHOTO_MESSAGES.consentRequired) { setConsent(false); setAskConsent(true) }
+      setError(r.error)
+      return
+    }
+    setPhoto({ path: r.data.photo_path, preview: URL.createObjectURL(blob) })
+    const found = r.data.items.filter((i) => i.food)
+    setItems((xs) => [...xs, ...found.map((i) => ({ food: i.food!, amount: String(i.grams), portion: -1, seenAs: i.name, confidence: i.confidence }))])
+    setPending(r.data.items.filter((i) => !i.food).map(({ name, grams, confidence }) => ({ name, grams, confidence })))
+    setPhotoNote(r.data.no_food ? PHOTO_MESSAGES.noFood : r.data.low_confidence ? PHOTO_MESSAGES.lowConfidence : '')
+  }
+
+  const removePhoto = async () => {
+    if (!photo) return
+    await discardPhoto(photo.path)
+    setPhoto(null)
+    setPhotoNote('')
+  }
+
+  // Elegir un resultado del buscador: si se está resolviendo un alimento de la
+  // foto que no se encontró, se usa su cantidad estimada.
+  const pickFood = (f: Food) => {
+    const p = replacing !== null ? pending[replacing] : null
+    setItems((xs) => [...xs, p
+      ? { food: f, amount: String(p.grams), portion: -1, seenAs: p.name, confidence: p.confidence }
+      : { food: f, amount: '100', portion: -1 }])
+    if (p) setPending((xs) => xs.filter((_, i) => i !== replacing))
+    setReplacing(null)
+    setQ('')
+    setResults([])
+  }
+
+  const searchPending = (idx: number) => {
+    setReplacing(idx)
+    setQ(pending[idx].name)
+    searchRef.current?.focus()
+  }
+
+  const cancel = async () => {
+    if (photo) await discardPhoto(photo.path)
+    onCancel()
+  }
+
   const save = async () => {
     setError('')
     if (items.length === 0) { setError('Añade al menos un alimento.'); return }
@@ -424,8 +541,9 @@ function AddMeal({ date, hide, onCancel, onSaved }: { date: string; hide: boolea
       body: JSON.stringify({
         log_date: date,
         meal_type: mealType || null,
-        source: 'manual',
-        items: items.map((i) => ({ food_id: i.food.id, grams: itemGrams(i) })),
+        source: photo ? 'photo' : 'manual',
+        photo_path: photo?.path ?? null,
+        items: items.map((i) => ({ food_id: i.food.id, grams: itemGrams(i), confidence: i.confidence ?? null })),
       }),
     })
     setSaving(false)
@@ -437,6 +555,52 @@ function AddMeal({ date, hide, onCancel, onSaved }: { date: string; hide: boolea
     <div style={{ ...cardStyle, border: '2px solid #FFD700', marginTop: 16 }}>
       <h3 style={{ fontSize: 16, fontWeight: 700, color: '#2d3748', marginBottom: 12 }}>{COPY.addMeal}</h3>
 
+      <input ref={fileRef} type="file" accept="image/*" onChange={onPhotoChosen} style={{ display: 'none' }} />
+      {askConsent ? (
+        <div style={{ background: '#fffaf0', border: '1px solid #fbd38d', borderRadius: 10, padding: 14, marginBottom: 12 }}>
+          <p style={{ ...labelStyle, marginBottom: 8 }}>{PHOTO_CONSENT.title}</p>
+          <ul style={{ ...hintStyle, paddingLeft: 18, margin: '0 0 8px' }}>
+            {PHOTO_CONSENT.points.map((t) => <li key={t} style={{ marginBottom: 4 }}>{t}</li>)}
+          </ul>
+          <p style={{ ...hintStyle, fontSize: 12 }}>
+            Más detalles en <Link href="/privacidad" target="_blank" style={{ color: '#c05621' }}>la política de privacidad</Link>.
+          </p>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button style={{ ...btnStyle, background: '#edf2f7', color: '#4a5568' }} onClick={() => setAskConsent(false)}>{PHOTO_CONSENT.decline}</button>
+            <button style={btnStyle} onClick={acceptConsent}>{PHOTO_CONSENT.accept}</button>
+          </div>
+        </div>
+      ) : (
+        <button
+          style={{ ...btnStyle, marginTop: 0, marginBottom: 12, background: 'white', color: '#DC143C', border: '2px solid #FF6347', opacity: analyzing || consent === null ? 0.7 : 1 }}
+          disabled={analyzing || consent === null}
+          onClick={startPhoto}
+        >
+          {analyzing ? PHOTO_UI.analyzing : `📷 ${photo ? PHOTO_UI.retake : PHOTO_UI.button}`}
+        </button>
+      )}
+      {photo && (
+        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 12 }}>
+          {/* Vista previa local (blob:), por eso no next/image. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={photo.preview} alt={PHOTO_UI.photoAlt} style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 10, flexShrink: 0 }} />
+          <div>
+            <p style={{ ...hintStyle, margin: 0 }}>{PHOTO_MESSAGES.reviewHint}</p>
+            <button style={{ ...linkBtn, paddingLeft: 0 }} onClick={removePhoto}>{PHOTO_UI.removePhoto}</button>
+          </div>
+        </div>
+      )}
+      {photoNote && <p style={{ ...pStyle, background: '#fffaf0', borderRadius: 10, padding: '8px 12px' }}>{photoNote}</p>}
+      {pending.map((p, idx) => (
+        <div key={`${p.name}-${idx}`} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', marginBottom: 8, border: '1px dashed #fbd38d', borderRadius: 10 }}>
+          <span style={{ flex: 1, fontSize: 13, color: '#4a5568' }}>
+            <strong>{p.name}</strong> · {PHOTO_MESSAGES.notFound}
+          </span>
+          <button style={{ ...linkBtn, color: '#c05621', fontWeight: 600 }} onClick={() => searchPending(idx)}>{PHOTO_UI.searchIt}</button>
+          <button style={linkBtn} aria-label="Quitar" onClick={() => setPending((xs) => xs.filter((_, i) => i !== idx))}>✕</button>
+        </div>
+      ))}
+
       <label style={labelStyle}>Momento del día</label>
       <select value={mealType} onChange={(e) => setMealType(e.target.value)} style={{ ...inputStyle, marginBottom: 12 }}>
         <option value="">Sin especificar</option>
@@ -444,6 +608,7 @@ function AddMeal({ date, hide, onCancel, onSaved }: { date: string; hide: boolea
       </select>
 
       <input
+        ref={searchRef}
         style={inputStyle}
         placeholder={COPY.searchPlaceholder}
         value={q}
@@ -455,7 +620,7 @@ function AddMeal({ date, hide, onCancel, onSaved }: { date: string; hide: boolea
       {visibleResults.length > 0 && (
         <div style={{ maxHeight: 220, overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: 10, marginTop: 6 }}>
           {visibleResults.map((f) => (
-            <button key={f.id} onClick={() => { setItems((xs) => [...xs, { food: f, amount: '100', portion: -1 }]); setQ(''); setResults([]) }} style={{
+            <button key={f.id} onClick={() => pickFood(f)} style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '10px 12px', border: 'none',
               borderBottom: '1px solid #edf2f7', background: 'white', cursor: 'pointer', fontSize: 14, color: '#2d3748', textAlign: 'left', fontFamily: 'inherit',
             }}>
@@ -473,7 +638,15 @@ function AddMeal({ date, hide, onCancel, onSaved }: { date: string; hide: boolea
             return (
               <div key={idx} style={{ marginBottom: 12, paddingBottom: 10, borderBottom: '1px solid #edf2f7' }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 6 }}>
-                  <span style={{ flex: 1, fontSize: 14, color: '#2d3748' }}>{it.food.name}<FoodMeta food={it.food} /></span>
+                  <span style={{ flex: 1, fontSize: 14, color: '#2d3748' }}>
+                    {it.food.name}<FoodMeta food={it.food} />
+                    {it.seenAs && (
+                      <span style={{ display: 'block', fontSize: 12, color: '#a0aec0' }}>
+                        {PHOTO_UI.seenAs} {it.seenAs}
+                        {it.confidence === 'baja' && <span style={{ ...tagStyle, marginLeft: 6, background: '#fffaf0', color: '#c05621' }}>{PHOTO_UI.lowConfidenceTag}</span>}
+                      </span>
+                    )}
+                  </span>
                   <button onClick={() => setItems((xs) => xs.filter((_, i) => i !== idx))} style={linkBtn} aria-label="Quitar alimento">✕</button>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -510,8 +683,10 @@ function AddMeal({ date, hide, onCancel, onSaved }: { date: string; hide: boolea
       </p>
       {error && <p style={errorStyle}>{error}</p>}
       <div style={{ display: 'flex', gap: 10 }}>
-        <button style={{ ...btnStyle, background: '#edf2f7', color: '#4a5568' }} onClick={onCancel}>Cancelar</button>
-        <button style={{ ...btnStyle, opacity: saving ? 0.7 : 1 }} disabled={saving} onClick={save}>{saving ? 'Guardando…' : 'Guardar'}</button>
+        <button style={{ ...btnStyle, background: '#edf2f7', color: '#4a5568' }} onClick={cancel}>Cancelar</button>
+        <button style={{ ...btnStyle, opacity: saving || analyzing ? 0.7 : 1 }} disabled={saving || analyzing} onClick={save}>
+          {saving ? 'Guardando…' : photo ? PHOTO_UI.confirmSave : 'Guardar'}
+        </button>
       </div>
     </div>
   )
@@ -611,6 +786,79 @@ function Settings({ target, onSaved }: { target: Target; onSaved: (t: Target) =>
       {error && <p style={errorStyle}>{error}</p>}
       <button style={{ ...btnStyle, opacity: saving ? 0.7 : 1 }} disabled={saving} onClick={save}>{saving ? 'Guardando…' : COPY.settings.save}</button>
       <button style={{ ...btnStyle, background: '#edf2f7', color: '#4a5568' }} onClick={() => setEditProfile(true)}>{COPY.settings.recalc}</button>
+      <PhotoConsentSettings />
+    </div>
+  )
+}
+
+// Estado del permiso para analizar fotos y opción de retirarlo.
+function PhotoConsentSettings() {
+  const [consented, setConsented] = useState<boolean | null>(null)
+  const [note, setNote] = useState('')
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    api<{ consented: boolean }>('/api/tracker/photo-consent').then((r) => {
+      if (!cancelled) setConsented(r.ok ? r.data.consented : false)
+    })
+    return () => { cancelled = true }
+  }, [])
+
+  const withdraw = async () => {
+    setError('')
+    const r = await api('/api/tracker/photo-consent', { method: 'DELETE' })
+    if (!r.ok) { setError(r.error); return }
+    setConsented(false)
+    setNote(PHOTO_UI.withdrawn)
+  }
+
+  if (consented === null) return null
+  return (
+    <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid #edf2f7' }}>
+      <p style={labelStyle}>{PHOTO_UI.settingsTitle}</p>
+      <p style={hintStyle}>{note || (consented ? PHOTO_UI.settingsOn : PHOTO_UI.settingsOff)}</p>
+      {error && <p style={errorStyle}>{error}</p>}
+      {consented && (
+        <button style={{ ...btnStyle, background: 'white', color: '#4a5568', border: '2px solid #e2e8f0' }} onClick={withdraw}>{PHOTO_UI.withdraw}</button>
+      )}
+    </div>
+  )
+}
+
+// Foto de una comida guardada: se pide una URL firmada (60 s) solo al pulsar "Ver foto".
+function MealPhoto({ mealId, onDeleted, onError }: { mealId: string; onDeleted: () => void; onError: (msg: string) => void }) {
+  const [url, setUrl] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  const toggle = async () => {
+    if (url) { setUrl(null); return }
+    setBusy(true)
+    const r = await api<{ url: string }>(`/api/meals/${mealId}/photo`)
+    setBusy(false)
+    if (!r.ok) { onError(r.error); return }
+    setUrl(r.data.url)
+  }
+
+  const remove = async () => {
+    if (!window.confirm(PHOTO_UI.confirmDeletePhoto)) return
+    setBusy(true)
+    const r = await api(`/api/meals/${mealId}/photo`, { method: 'DELETE' })
+    setBusy(false)
+    if (!r.ok) { onError(r.error); return }
+    setUrl(null)
+    onDeleted()
+  }
+
+  return (
+    <div style={{ marginTop: 8 }}>
+      <div style={{ display: 'flex', gap: 12 }}>
+        <button style={{ ...linkBtn, paddingLeft: 0, color: '#718096' }} disabled={busy} onClick={toggle}>📷 {url ? PHOTO_UI.hidePhoto : PHOTO_UI.viewPhoto}</button>
+        <button style={linkBtn} disabled={busy} onClick={remove}>{PHOTO_UI.deletePhoto}</button>
+      </div>
+      {/* URL firmada temporal de Supabase Storage, por eso no next/image. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      {url && <img src={url} alt={PHOTO_UI.photoAlt} style={{ width: '100%', borderRadius: 10, marginTop: 6 }} />}
     </div>
   )
 }

@@ -30,3 +30,24 @@ export const PHOTO_MESSAGES = {
   notFound: 'No encontré este alimento: búscalo tú.',
   reviewHint: 'La foto es una ayuda: revisa los alimentos y las cantidades, y cambia lo que haga falta antes de guardar.',
 } as const
+
+export const PHOTO_UI = {
+  button: 'Foto de mi plato',
+  retake: 'Usar otra foto',
+  analyzing: 'Analizando tu plato…',
+  confirmSave: 'Confirmar y guardar',
+  removePhoto: 'Quitar la foto',
+  seenAs: 'En la foto:',
+  lowConfidenceTag: 'revisa la cantidad',
+  searchIt: 'Buscar',
+  photoAlt: 'Foto de tu plato',
+  viewPhoto: 'Ver foto',
+  hidePhoto: 'Ocultar foto',
+  deletePhoto: 'Borrar esta foto',
+  confirmDeletePhoto: '¿Borrar la foto de esta comida? La comida se queda guardada.',
+  settingsTitle: 'Fotos de comida',
+  settingsOn: 'Diste permiso para analizar fotos de tus platos.',
+  settingsOff: 'No has dado permiso para analizar fotos. Te lo pediremos la primera vez que uses "Foto de mi plato".',
+  withdraw: 'Retirar el permiso',
+  withdrawn: 'Permiso retirado. Las fotos que ya guardaste se borran solas a los 30 días, y puedes borrarlas antes desde cada comida.',
+} as const
