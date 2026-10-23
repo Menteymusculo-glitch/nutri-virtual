@@ -23,6 +23,8 @@ const { state, mockFrom, admin } = vi.hoisted(() => {
   return { state, mockFrom: vi.fn(() => c), admin }
 })
 
+vi.mock('@/lib/mealPhotos', () => ({ deleteAllUserPhotos: async () => null }))
+
 vi.mock('@/lib/auth-server', () => ({
   supabaseAdmin: { from: mockFrom, auth: { admin } },
   getServerUser: async () => state.user,

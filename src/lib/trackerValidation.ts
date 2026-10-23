@@ -9,6 +9,8 @@ export const MAX_ITEMS_PER_MEAL = 30
 export const MAX_GRAMS = 3000
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+// Ruta de una foto de comida en el bucket: {user_id}/{uuid}.jpg
+const PHOTO_PATH_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.jpg$/
 export const isUuid = (s: unknown): s is string => typeof s === 'string' && UUID_RE.test(s)
 
 type Result<T> = { ok: true; value: T } | { ok: false; error: string }
@@ -23,6 +25,7 @@ export interface MealInput {
   log_date: string
   meal_type: MealType | null
   source: 'manual' | 'photo'
+  photo_path: string | null
   items: MealItemInput[]
 }
 
@@ -40,6 +43,14 @@ export function parseMealInput(body: unknown): Result<MealInput> {
 
   const source = b.source ?? 'manual'
   if (source !== 'manual' && source !== 'photo') return { ok: false, error: 'Origen inválido.' }
+
+  let photo_path: string | null = null
+  if (b.photo_path != null) {
+    if (source !== 'photo' || typeof b.photo_path !== 'string' || !PHOTO_PATH_RE.test(b.photo_path)) {
+      return { ok: false, error: 'Foto inválida.' }
+    }
+    photo_path = b.photo_path
+  }
 
   if (!Array.isArray(b.items) || b.items.length === 0) {
     return { ok: false, error: 'Añade al menos un alimento.' }
@@ -62,7 +73,7 @@ export function parseMealInput(body: unknown): Result<MealInput> {
     items.push({ food_id: it.food_id, grams: Math.round(grams * 10) / 10, confidence })
   }
 
-  return { ok: true, value: { log_date: b.log_date, meal_type, source, items } }
+  return { ok: true, value: { log_date: b.log_date, meal_type, source, photo_path, items } }
 }
 
 export interface TargetInput {

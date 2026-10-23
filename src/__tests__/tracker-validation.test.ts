@@ -9,8 +9,19 @@ describe('parseMealInput', () => {
     const r = parseMealInput(okMeal)
     expect(r).toEqual({
       ok: true,
-      value: { log_date: '2026-10-22', meal_type: 'almuerzo', source: 'manual', items: [{ food_id: FOOD, grams: 150, confidence: null }] },
+      value: { log_date: '2026-10-22', meal_type: 'almuerzo', source: 'manual', photo_path: null, items: [{ food_id: FOOD, grams: 150, confidence: null }] },
     })
+  })
+
+  it('photo_path: solo con source photo y con formato {user_id}/{uuid}.jpg', () => {
+    const path = '11111111-1111-4111-8111-111111111111/22222222-2222-4222-8222-222222222222.jpg'
+    const ok = parseMealInput({ ...okMeal, source: 'photo', photo_path: path })
+    expect(ok.ok && ok.value.photo_path).toBe(path)
+    expect(parseMealInput({ ...okMeal, source: 'manual', photo_path: path }).ok).toBe(false)
+    expect(parseMealInput({ ...okMeal, source: 'photo', photo_path: '../otra/' + path }).ok).toBe(false)
+    expect(parseMealInput({ ...okMeal, source: 'photo', photo_path: 'https://x.test/a.jpg' }).ok).toBe(false)
+    const sinFoto = parseMealInput({ ...okMeal, source: 'photo' })
+    expect(sinFoto.ok && sinFoto.value.photo_path).toBe(null)
   })
 
   it('ignora kcal enviadas por el cliente', () => {

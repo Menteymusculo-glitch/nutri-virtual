@@ -11,8 +11,9 @@ const { state, mockFrom } = vi.hoisted(() => {
     insertedLogs: [] as Record<string, unknown>[],
     insertedItems: [] as Record<string, unknown>[],
     deleted: [] as Record<string, unknown>[],
-    meals: [] as { id: string; user_id: string }[],
+    meals: [] as { id: string; user_id: string; photo_path?: string | null }[],
     itemsError: null as { message: string } | null,
+    removedPhotos: [] as string[],
   }
 
   function chain(table: string) {
@@ -44,9 +45,14 @@ const { state, mockFrom } = vi.hoisted(() => {
         }
         if (table === 'meal_logs' && op === 'delete') {
           state.deleted.push({ ...filters })
-          const before = state.meals.length
-          state.meals = state.meals.filter((m) => !(m.id === filters.id && (!filters.user_id || m.user_id === filters.user_id)))
-          return Promise.resolve({ count: before - state.meals.length, error: null }).then(resolve)
+          const hit = (m: { id: string; user_id: string }) => m.id === filters.id && (!filters.user_id || m.user_id === filters.user_id)
+          const removed = state.meals.filter(hit)
+          state.meals = state.meals.filter((m) => !hit(m))
+          return Promise.resolve({
+            count: removed.length,
+            data: removed.map((m) => ({ photo_path: m.photo_path ?? null })),
+            error: null,
+          }).then(resolve)
         }
         return Promise.resolve({ data: null, error: null }).then(resolve)
       },
@@ -56,6 +62,10 @@ const { state, mockFrom } = vi.hoisted(() => {
 
   return { state, mockFrom: vi.fn((t: string) => chain(t)) }
 })
+
+vi.mock('@/lib/mealPhotos', () => ({
+  removePhotos: async (paths: string[]) => { state.removedPhotos.push(...paths); return null },
+}))
 
 vi.mock('@/lib/auth-server', () => ({
   supabaseAdmin: { from: mockFrom },
@@ -89,6 +99,7 @@ beforeEach(() => {
   state.deleted = []
   state.meals = [{ id: MEAL, user_id: 'user-1' }]
   state.itemsError = null
+  state.removedPhotos = []
 })
 
 describe('POST /api/meals', () => {
@@ -141,6 +152,21 @@ describe('POST /api/meals', () => {
     expect(state.insertedLogs).toHaveLength(0)
   })
 
+  it('guarda una comida de foto con su photo_path (solo si la foto es de la usuaria)', async () => {
+    const me = '44444444-4444-4444-8444-444444444444'
+    const other = '55555555-5555-4555-8555-555555555555'
+    const photo = '66666666-6666-4666-8666-666666666666'
+    state.user = { id: me }
+    const mine = await post({ log_date: '2026-10-22', source: 'photo', photo_path: `${me}/${photo}.jpg`, items: [{ food_id: ARROZ, grams: 100, confidence: 'media' }] })
+    expect(mine.status).toBe(201)
+    expect(state.insertedLogs[0]).toMatchObject({ source: 'photo', photo_path: `${me}/${photo}.jpg`, total_kcal: 130 })
+    expect(state.insertedItems[0]).toMatchObject({ confidence: 'media', kcal: 130 })
+
+    const theirs = await post({ log_date: '2026-10-22', source: 'photo', photo_path: `${other}/${photo}.jpg`, items: [{ food_id: ARROZ, grams: 100 }] })
+    expect(theirs.status).toBe(400)
+    expect(state.insertedLogs).toHaveLength(1)
+  })
+
   it('si fallan los items, borra la cabecera y devuelve 500', async () => {
     state.itemsError = { message: 'boom' }
     const err = vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -156,6 +182,12 @@ describe('DELETE /api/meals/[id]', () => {
     const res = await del(MEAL)
     expect(res.status).toBe(200)
     expect(state.deleted[0]).toEqual({ id: MEAL, user_id: 'user-1' })
+  })
+
+  it('al borrar una comida con foto, borra también la foto', async () => {
+    state.meals = [{ id: MEAL, user_id: 'user-1', photo_path: 'user-1/foto.jpg' }]
+    expect((await del(MEAL)).status).toBe(200)
+    expect(state.removedPhotos).toEqual(['user-1/foto.jpg'])
   })
 
   it('404 si la comida es de otra usuaria', async () => {

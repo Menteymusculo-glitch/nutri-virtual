@@ -34,6 +34,9 @@ export async function POST(req: NextRequest) {
       .in('id', foodIds),
   )
   if (!auth.ok) return auth.response
+  if (meal.photo_path && !meal.photo_path.startsWith(`${auth.user.id.toLowerCase()}/`)) {
+    return NextResponse.json({ error: 'Foto inválida.' }, { status: 400 })
+  }
   const { data: foods, error: foodsError } = auth.data
   if (foodsError) return serverError('meals/post foods', foodsError)
 
@@ -60,6 +63,7 @@ export async function POST(req: NextRequest) {
       log_date: meal.log_date,
       meal_type: meal.meal_type,
       source: meal.source,
+      photo_path: meal.photo_path,
       total_kcal: totals.kcal,
     })
     .select('id')

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/auth-server'
+import { deleteAllUserPhotos } from '@/lib/mealPhotos'
 import { requireAdmin } from '@/lib/adminAuth'
 
 export async function GET() {
@@ -74,6 +75,13 @@ export async function DELETE(req: NextRequest) {
 
   const { userId } = await req.json()
   if (!userId) return NextResponse.json({ error: 'userId requerido.' }, { status: 400 })
+
+  // Las fotos de comida viven en Storage y no caen en cascada con la cuenta.
+  const photosError = await deleteAllUserPhotos(userId)
+  if (photosError) {
+    console.error('[admin/users delete] fotos:', photosError.message)
+    return NextResponse.json({ error: 'No se pudieron borrar las fotos de esta usuaria. Inténtalo de nuevo.' }, { status: 500 })
+  }
 
   await supabaseAdmin.from('access').delete().eq('user_id', userId)
   await supabaseAdmin.auth.admin.deleteUser(userId)

@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     loadTarget(userId),
     supabaseAdmin
       .from('meal_logs')
-      .select('id, logged_at, log_date, meal_type, source, total_kcal, meal_items(id, food_id, name, grams, kcal, protein, carbs, fat, confidence)')
+      .select('id, logged_at, log_date, meal_type, source, photo_path, total_kcal, meal_items(id, food_id, name, grams, kcal, protein, carbs, fat, confidence)')
       .eq('user_id', userId)
       .eq('log_date', date)
       .order('logged_at', { ascending: true })
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
   if (mealsError) return serverError('tracker/day meals', mealsError)
   if (closedError) return serverError('tracker/day closures', closedError)
 
-  const list = (meals ?? []).map((m) => ({ ...m, total_kcal: Number(m.total_kcal) }))
+  const list = (meals ?? []).map(({ photo_path, ...m }) => ({ ...m, has_photo: !!photo_path, total_kcal: Number(m.total_kcal) }))
   const items = list.flatMap((m) =>
     (m.meal_items ?? []).map((i) => ({
       kcal: Number(i.kcal),

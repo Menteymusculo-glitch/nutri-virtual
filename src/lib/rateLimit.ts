@@ -21,6 +21,11 @@ export function rateLimitKey(ip: string, email: string | null | undefined, salt 
   return `${sha256(`${salt}:ip:${ip}`)}:${sha256(`${salt}:email:${e}`)}`
 }
 
+// Clave para cuotas por usuaria o por IP: hash con sal, nunca el valor en claro.
+export function hashedKey(kind: 'user' | 'ip', value: string, salt = process.env.RATE_LIMIT_SALT ?? ''): string {
+  return sha256(`${salt}:${kind}:${value}`)
+}
+
 // Comparación en tiempo constante (también si las longitudes difieren).
 export function safeEqual(a: string, b: string): boolean {
   return timingSafeEqual(createHash('sha256').update(a).digest(), createHash('sha256').update(b).digest())

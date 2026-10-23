@@ -29,7 +29,7 @@ vi.mock('@supabase/supabase-js', () => ({ createClient: () => ({ from: mockFrom 
 vi.mock('@supabase/ssr', () => ({ createServerClient: vi.fn() }))
 vi.mock('next/headers', () => ({ cookies: vi.fn() }))
 
-import { hasAccess, hasNutriAccess, hasTrackerAccess, hasIdentityAccess } from '@/lib/auth-server'
+import { hasAccess, hasNutriAccess, hasTrackerAccess, hasIdentityAccess, getTrackerAccess } from '@/lib/auth-server'
 
 beforeEach(() => {
   state.row = null
@@ -80,5 +80,16 @@ describe('comprobaciones de acceso', () => {
   it('sin fila en access → sin acceso', async () => {
     expect(await hasAccess('u1')).toBe(false)
     expect(await hasTrackerAccess('u1')).toBe(false)
+  })
+
+  it('getTrackerAccess devuelve también el plan (cuota de fotos), con la misma regla', async () => {
+    state.row = { role: null, status: 'active', plan: 'nutri_app' }
+    expect(await getTrackerAccess('u1')).toEqual({ allowed: true, plan: 'nutri_app' })
+    state.row = { role: null, status: 'expired', plan: 'premium' }
+    expect(await getTrackerAccess('u1')).toEqual({ allowed: false, plan: 'premium' })
+    state.row = { role: 'admin', status: null, plan: null }
+    expect(await getTrackerAccess('u1')).toEqual({ allowed: true, plan: null })
+    state.row = null
+    expect(await getTrackerAccess('u1')).toEqual({ allowed: false, plan: null })
   })
 })

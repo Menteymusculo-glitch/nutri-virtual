@@ -69,6 +69,14 @@ export async function hasNutriAccess(userId: string): Promise<boolean> {
   return checkAccess(userId, NUTRI_PLANS)
 }
 
+// Como hasTrackerAccess, pero devuelve también el plan (las cuotas de fotos dependen de él).
+export async function getTrackerAccess(userId: string): Promise<{ allowed: boolean; plan: string | null }> {
+  const row = await loadAccessRow(userId)
+  const allowed = row?.role === 'admin'
+    || (row?.status === 'active' && NUTRI_PLANS.includes(row.plan as typeof NUTRI_PLANS[number]))
+  return { allowed, plan: row?.plan ?? null }
+}
+
 // Gate for the calorie tracker — same plans as Nutri Virtual today (NUTRI_PLANS).
 // Kept separate so the tracker can diverge later without touching every route.
 export async function hasTrackerAccess(userId: string): Promise<boolean> {
