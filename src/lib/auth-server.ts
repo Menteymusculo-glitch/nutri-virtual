@@ -41,25 +41,32 @@ export async function isAdmin(userId: string): Promise<boolean> {
   return data?.role === 'admin'
 }
 
-export async function hasAccess(userId: string): Promise<boolean> {
-  if (await isAdmin(userId)) return true
+// Una sola lectura de access (role, status, plan) para cada comprobación: antes se
+// hacían dos consultas seguidas (isAdmin y luego el plan). Misma regla: admin pasa
+// siempre; si no, el acceso debe estar activo y, si se indica, con un plan permitido.
+async function loadAccessRow(userId: string): Promise<{ role: string | null; status: string | null; plan: string | null } | null> {
   const { data } = await supabaseAdmin
     .from('access')
-    .select('status')
+    .select('role, status, plan')
     .eq('user_id', userId)
     .single()
-  return data?.status === 'active'
+  return data ?? null
+}
+
+async function checkAccess(userId: string, plans?: readonly string[]): Promise<boolean> {
+  const row = await loadAccessRow(userId)
+  if (row?.role === 'admin') return true
+  if (row?.status !== 'active') return false
+  return !plans || plans.includes(row.plan as string)
+}
+
+export async function hasAccess(userId: string): Promise<boolean> {
+  return checkAccess(userId)
 }
 
 // Gate for Nutri Virtual — training_club, premium, or gym_virtual_core
 export async function hasNutriAccess(userId: string): Promise<boolean> {
-  if (await isAdmin(userId)) return true
-  const { data } = await supabaseAdmin
-    .from('access')
-    .select('status, plan')
-    .eq('user_id', userId)
-    .single()
-  return data?.status === 'active' && NUTRI_PLANS.includes(data?.plan as typeof NUTRI_PLANS[number])
+  return checkAccess(userId, NUTRI_PLANS)
 }
 
 // Gate for the calorie tracker — same plans as Nutri Virtual today (NUTRI_PLANS).
@@ -70,13 +77,7 @@ export async function hasTrackerAccess(userId: string): Promise<boolean> {
 
 // Gate for Motor de Identidad — training_club or premium only (not gym_virtual_core)
 export async function hasIdentityAccess(userId: string): Promise<boolean> {
-  if (await isAdmin(userId)) return true
-  const { data } = await supabaseAdmin
-    .from('access')
-    .select('status, plan')
-    .eq('user_id', userId)
-    .single()
-  return data?.status === 'active' && IDENTITY_PLANS.includes(data?.plan as typeof IDENTITY_PLANS[number])
+  return checkAccess(userId, IDENTITY_PLANS)
 }
 
 // Backward-compat alias — same as hasNutriAccess

@@ -102,6 +102,22 @@ describe('POST /api/meals', () => {
     expect((await post({})).status).toBe(403)
   })
 
+  it('403 con una comida válida: no lee ni escribe nada a nombre de la usuaria', async () => {
+    state.access = false
+    const res = await post({ log_date: '2026-10-22', items: [{ food_id: ARROZ, grams: 100 }] })
+    expect(res.status).toBe(403)
+    expect(state.insertedLogs).toHaveLength(0)
+    expect(state.insertedItems).toHaveLength(0)
+  })
+
+  it('JSON inválido: 401 sin sesión, 400 con sesión', async () => {
+    const bad = () => POST(new Request('http://x/api/meals', { method: 'POST', body: '{nope' }) as never)
+    state.user = null
+    expect((await bad()).status).toBe(401)
+    state.user = { id: 'user-1' }
+    expect((await bad()).status).toBe(400)
+  })
+
   it('400 con entrada inválida', async () => {
     const res = await post({ log_date: 'ayer', items: [] })
     expect(res.status).toBe(400)

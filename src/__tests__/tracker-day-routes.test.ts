@@ -7,6 +7,7 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 const { state, mockFrom } = vi.hoisted(() => {
   const state = {
     user: { id: 'user-1' } as { id: string } | null,
+    access: true,
     target: { user_id: 'user-1', goal: 'maintenance', target_kcal: 2000, tdee_kcal: 2300, sex: 'female', hide_calories: false, updated_at: null },
     logs: [] as { log_date: string; total_kcal: number }[],
     closures: [] as { user_id: string; log_date: string }[],
@@ -55,7 +56,7 @@ const { state, mockFrom } = vi.hoisted(() => {
 vi.mock('@/lib/auth-server', () => ({
   supabaseAdmin: { from: mockFrom },
   getServerUser: async () => state.user,
-  hasTrackerAccess: async () => true,
+  hasTrackerAccess: async () => state.access,
 }))
 
 import { GET as getWeek } from '@/app/api/tracker/week/route'
@@ -74,6 +75,7 @@ beforeEach(() => {
   vi.useFakeTimers()
   vi.setSystemTime(new Date(Date.UTC(2026, 9, 22, 12)))
   state.user = { id: 'user-1' }
+  state.access = true
   state.target = { user_id: 'user-1', goal: 'maintenance', target_kcal: 2000, tdee_kcal: 2300, sex: 'female', hide_calories: false, updated_at: null }
   state.logs = [
     { log_date: '2026-10-19', total_kcal: 2000 },
@@ -107,6 +109,29 @@ describe('GET /api/tracker/week', () => {
     expect(body.adjustment.average).toBe(1925)
   })
 
+  it('pide 8 días de una vez y solo cuenta los de la ventana', async () => {
+    state.logs.push(
+      { log_date: '2026-10-14', total_kcal: 9999 }, // hace 8 días: nunca entra
+      { log_date: '2026-10-15', total_kcal: 1000 }, // hace 7 días: solo con hoy abierto
+    )
+    const open = await (await getWeek(req(`http://x/api/tracker/week?today=${TODAY}`))).json()
+    expect(open.days[0]).toEqual({ date: '2026-10-15', consumed: 1000 })
+    expect(open.days.map((d: { consumed: number }) => d.consumed)).not.toContain(9999)
+
+    state.closures = [{ user_id: 'user-1', log_date: TODAY }]
+    const closed = await (await getWeek(req(`http://x/api/tracker/week?today=${TODAY}`))).json()
+    expect(closed.days[0].date).toBe('2026-10-16')
+    expect(closed.days.map((d: { date: string }) => d.date)).not.toContain('2026-10-15')
+  })
+
+  it('401 sin sesión y 403 sin plan', async () => {
+    state.user = null
+    expect((await getWeek(req(`http://x/api/tracker/week?today=${TODAY}`))).status).toBe(401)
+    state.user = { id: 'user-1' }
+    state.access = false
+    expect((await getWeek(req(`http://x/api/tracker/week?today=${TODAY}`))).status).toBe(403)
+  })
+
   it('acepta `end` como alias de `today`', async () => {
     const body = await (await getWeek(req(`http://x/api/tracker/week?end=${TODAY}`))).json()
     expect(body.today).toBe(TODAY)
@@ -119,6 +144,17 @@ describe('GET /api/tracker/week', () => {
 })
 
 describe('GET /api/tracker/day', () => {
+  it('401 sin sesión y 403 sin plan, también con fecha inválida', async () => {
+    state.user = null
+    expect((await getDay(req(`http://x/api/tracker/day?date=${TODAY}&today=${TODAY}`))).status).toBe(401)
+    expect((await getDay(req(`http://x/api/tracker/day?date=nope&today=${TODAY}`))).status).toBe(401)
+    state.user = { id: 'user-1' }
+    state.access = false
+    const res = await getDay(req(`http://x/api/tracker/day?date=${TODAY}&today=${TODAY}`))
+    expect(res.status).toBe(403)
+    expect(await res.json()).not.toHaveProperty('meals')
+  })
+
   it('hoy abierto → en_curso con progreso, sin "por debajo"', async () => {
     const body = await (await getDay(req(`http://x/api/tracker/day?date=${TODAY}&today=${TODAY}`))).json()
     expect(body.closed).toBe(false)

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/auth-server'
-import { requireTrackerUser, serverError } from '@/lib/trackerApi'
+import { requireTrackerUser, requireTrackerUserWith, serverError } from '@/lib/trackerApi'
 import { normalizeFoodName } from '@/lib/mealMath'
 import { rankFoodMatches } from '@/lib/foodSearch'
 
@@ -24,13 +24,18 @@ interface FoodRow {
 // Busca por nombre y alias (sin acentos ni mayúsculas) y devuelve cada alimento
 // con su estado (crudo/cocido…), la calidad del dato y sus porciones caseras.
 export async function GET(req: NextRequest) {
-  const auth = await requireTrackerUser()
-  if (!auth.ok) return auth.response
-
   const q = normalizeFoodName(req.nextUrl.searchParams.get('q') ?? '').slice(0, 60)
-  if (q.length < 2) return NextResponse.json({ foods: [] })
+  if (q.length < 2) {
+    const auth = await requireTrackerUser()
+    return auth.ok ? NextResponse.json({ foods: [] }) : auth.response
+  }
 
-  const { data, error } = await supabaseAdmin.rpc('search_foods', { q, max_rows: MAX_CANDIDATES })
+  // La búsqueda (solo lectura) va en paralelo con la comprobación del plan.
+  const auth = await requireTrackerUserWith(async () =>
+    await supabaseAdmin.rpc('search_foods', { q, max_rows: MAX_CANDIDATES }),
+  )
+  if (!auth.ok) return auth.response
+  const { data, error } = auth.data
   if (error) return serverError('foods/search', error)
 
   const ranked = rankFoodMatches((data ?? []) as FoodRow[], q, MAX_RESULTS)

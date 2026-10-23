@@ -1,30 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/auth-server'
-import { requireTrackerUser, serverError } from '@/lib/trackerApi'
+import { requireTrackerUser, requireTrackerUserWith, serverError } from '@/lib/trackerApi'
 import { parseMealInput } from '@/lib/trackerValidation'
 import { kcalFor, sumNutrients } from '@/lib/mealMath'
 
 // Crea una comida. Las kcal se calculan SIEMPRE aquí desde la tabla foods:
 // nunca se aceptan kcal enviadas por el cliente.
 export async function POST(req: NextRequest) {
-  const auth = await requireTrackerUser()
-  if (!auth.ok) return auth.response
-
+  // El cuerpo se lee antes de autenticar, pero ante un JSON inválido o datos que no
+  // validan se responde primero 401/403 si no hay sesión o plan.
   let body: unknown
+  let badJson = false
   try {
     body = await req.json()
   } catch {
-    return NextResponse.json({ error: 'JSON inválido.' }, { status: 400 })
+    badJson = true
   }
-  const parsed = parseMealInput(body)
-  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 })
+  const parsed = badJson ? null : parseMealInput(body)
+  if (!parsed || !parsed.ok) {
+    const auth = await requireTrackerUser()
+    if (!auth.ok) return auth.response
+    return NextResponse.json({ error: parsed ? parsed.error : 'JSON inválido.' }, { status: 400 })
+  }
   const meal = parsed.value
-
   const foodIds = [...new Set(meal.items.map((i) => i.food_id))]
-  const { data: foods, error: foodsError } = await supabaseAdmin
-    .from('foods')
-    .select('id, name, kcal_100g, protein_100g, carbs_100g, fat_100g')
-    .in('id', foodIds)
+
+  // Leer los alimentos (solo lectura) en paralelo con la comprobación del plan;
+  // las inserciones van después, cuando el acceso ya está confirmado.
+  const auth = await requireTrackerUserWith(async () =>
+    await supabaseAdmin
+      .from('foods')
+      .select('id, name, kcal_100g, protein_100g, carbs_100g, fat_100g')
+      .in('id', foodIds),
+  )
+  if (!auth.ok) return auth.response
+  const { data: foods, error: foodsError } = auth.data
   if (foodsError) return serverError('meals/post foods', foodsError)
 
   const byId = new Map((foods ?? []).map((f) => [f.id as string, f]))

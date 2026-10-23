@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/auth-server'
-import { loadTarget, requireTrackerUser, serverError } from '@/lib/trackerApi'
+import { loadTarget, requireTrackerUser, requireTrackerUserWith, serverError } from '@/lib/trackerApi'
 import { parseTargetInput } from '@/lib/trackerValidation'
 import { computeEnergy, targetKcal } from '@/lib/energy'
 
 export async function GET() {
-  const auth = await requireTrackerUser()
+  const auth = await requireTrackerUserWith(loadTarget)
   if (!auth.ok) return auth.response
 
-  const { data, error } = await loadTarget(auth.user.id)
+  const { data, error } = auth.data
   if (error) return serverError('tracker/target get', error)
   return NextResponse.json({ target: data })
 }
@@ -18,20 +18,26 @@ export async function GET() {
 // Después: se puede cambiar `goal` (recalcula el objetivo desde el TDEE guardado),
 // `hide_calories`, o enviar un `profile` nuevo para recalcular el TDEE.
 export async function PUT(req: NextRequest) {
-  const auth = await requireTrackerUser()
-  if (!auth.ok) return auth.response
-
+  // Como en POST /api/meals: sin sesión o sin plan se responde 401/403 antes que 400.
   let body: unknown
+  let badJson = false
   try {
     body = await req.json()
   } catch {
-    return NextResponse.json({ error: 'JSON inválido.' }, { status: 400 })
+    badJson = true
   }
-  const parsed = parseTargetInput(body)
-  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 })
+  const parsed = badJson ? null : parseTargetInput(body)
+  if (!parsed || !parsed.ok) {
+    const auth = await requireTrackerUser()
+    if (!auth.ok) return auth.response
+    return NextResponse.json({ error: parsed ? parsed.error : 'JSON inválido.' }, { status: 400 })
+  }
   const input = parsed.value
 
-  const { data: current, error: loadError } = await loadTarget(auth.user.id)
+  // Leer el objetivo actual (solo lectura) en paralelo con el plan; el upsert va después.
+  const auth = await requireTrackerUserWith(loadTarget)
+  if (!auth.ok) return auth.response
+  const { data: current, error: loadError } = auth.data
   if (loadError) return serverError('tracker/target load', loadError)
 
   const goal = input.goal ?? current?.goal

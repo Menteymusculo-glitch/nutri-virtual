@@ -6,15 +6,28 @@ import { isPlausibleToday } from '@/lib/calorieReport'
 
 export type TrackerAuth = { ok: true; user: User } | { ok: false; response: NextResponse }
 
+const unauthorized = () => NextResponse.json({ error: 'Inicia sesión para continuar.' }, { status: 401 })
+const forbidden = () => NextResponse.json({ error: 'Tu plan no incluye el registro diario.' }, { status: 403 })
+
 export async function requireTrackerUser(): Promise<TrackerAuth> {
   const user = await getServerUser()
-  if (!user) {
-    return { ok: false, response: NextResponse.json({ error: 'Inicia sesión para continuar.' }, { status: 401 }) }
-  }
-  if (!(await hasTrackerAccess(user.id))) {
-    return { ok: false, response: NextResponse.json({ error: 'Tu plan no incluye el registro diario.' }, { status: 403 }) }
-  }
+  if (!user) return { ok: false, response: unauthorized() }
+  if (!(await hasTrackerAccess(user.id))) return { ok: false, response: forbidden() }
   return { ok: true, user }
+}
+
+export type TrackerAuthWith<T> = { ok: true; user: User; data: T } | { ok: false; response: NextResponse }
+
+// Igual que requireTrackerUser, pero con la sesión ya verificada lanza `read` en
+// paralelo con la comprobación del plan para ahorrar un viaje a la base de datos.
+// Si el plan no da acceso, el resultado de `read` se descarta y se responde 403.
+// `read` debe ser SOLO LECTURA: nada que escriba puede ir aquí.
+export async function requireTrackerUserWith<T>(read: (userId: string) => Promise<T>): Promise<TrackerAuthWith<T>> {
+  const user = await getServerUser()
+  if (!user) return { ok: false, response: unauthorized() }
+  const [allowed, data] = await Promise.all([hasTrackerAccess(user.id), read(user.id)])
+  if (!allowed) return { ok: false, response: forbidden() }
+  return { ok: true, user, data }
 }
 
 export function serverError(tag: string, err: { message?: string } | null | undefined) {

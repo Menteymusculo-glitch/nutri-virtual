@@ -6,6 +6,7 @@ import type { DayReport, WeekAdjustment, DayTotal } from '@/lib/calorieReport'
 import { COPY, SUPPORT_URL, dayCopy, weekCopy, fmtKcal, type AlertCopy } from '@/lib/reportCopy'
 import { gramsForPortion, kcalFor, sumNutrients } from '@/lib/mealMath'
 import { PREP_LABELS } from '@/lib/foodSearch'
+import { createSearchCache } from '@/lib/searchCache'
 import { targetRaisedToFloor, type ActivityLevel, type Goal } from '@/lib/energy'
 
 // ── Tipos de las respuestas de la API ────────────────────────────────────────
@@ -87,6 +88,9 @@ function profileFromPlan(): Partial<ProfileForm> {
     return {}
   }
 }
+
+// Resultados de búsqueda ya pedidos en esta pestaña: repetir una consulta no vuelve al servidor.
+const searchCache = createSearchCache<Food[]>()
 
 async function api<T>(url: string, init?: RequestInit): Promise<{ ok: true; data: T } | { ok: false; status: number; error: string }> {
   try {
@@ -383,13 +387,25 @@ function AddMeal({ date, hide, onCancel, onSaved }: { date: string; hide: boolea
 
   useEffect(() => {
     if (query.length < 2) return
+    const cached = searchCache.get(query)
+    if (cached) {
+      Promise.resolve().then(() => { setResults(cached); setSearching(false) })
+      return
+    }
+    // Al teclear otra letra se cancela la petición anterior, así una respuesta
+    // lenta y vieja nunca pisa los resultados de la consulta actual.
+    const controller = new AbortController()
     const t = setTimeout(async () => {
       setSearching(true)
-      const r = await api<{ foods: Food[] }>(`/api/foods/search?q=${encodeURIComponent(query)}`)
+      const r = await api<{ foods: Food[] }>(`/api/foods/search?q=${encodeURIComponent(query)}`, { signal: controller.signal })
+      if (controller.signal.aborted) return
       setSearching(false)
-      if (r.ok) setResults(r.data.foods)
+      if (r.ok) {
+        searchCache.set(query, r.data.foods)
+        setResults(r.data.foods)
+      }
     }, 250)
-    return () => clearTimeout(t)
+    return () => { clearTimeout(t); controller.abort() }
   }, [query])
 
   // Vista previa en el navegador; las kcal definitivas se calculan en el servidor.
@@ -434,7 +450,7 @@ function AddMeal({ date, hide, onCancel, onSaved }: { date: string; hide: boolea
         onChange={(e) => setQ(e.target.value)}
         autoFocus
       />
-      {searching && <p style={hintStyle}>Buscando…</p>}
+      {searching && query.length >= 2 && <p style={hintStyle}>Buscando…</p>}
       {!searching && query.length >= 2 && visibleResults.length === 0 && <p style={hintStyle}>{COPY.noResults}</p>}
       {visibleResults.length > 0 && (
         <div style={{ maxHeight: 220, overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: 10, marginTop: 6 }}>
